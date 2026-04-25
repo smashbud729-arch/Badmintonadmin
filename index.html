@@ -195,7 +195,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .psv{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--pk)}
 .psl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
 
-/* Leaderboard */
+/* Leaderboard tabs */
+.lb-tab{padding:7px 18px;border-radius:6px;border:1.5px solid var(--gr2);background:var(--b2);color:var(--gr4);cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.lb-tab.active{background:var(--pk);border-color:var(--pk);color:#fff}
+.lb-tab:hover:not(.active){border-color:var(--pk);color:var(--pk)}
+/* Leaderboard rows */
 .lb-row{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--b2);border:1px solid var(--gr);border-radius:8px;margin-bottom:6px}
 .lb-rank{font-family:'Bebas Neue',sans-serif;font-size:16px;width:24px;text-align:center}
 .r1{color:var(--pk)}.r2{color:#CCC}.r3{color:var(--bam)}.rn{color:var(--gr3)}
@@ -430,10 +434,44 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 <!-- ══ LEADERBOARD ══ -->
 <div class="view" id="view-leaderboard">
+  <!-- Global stats bar -->
   <div class="stat-grid" id="global-stats"></div>
   <div class="gdiv"></div>
-  <div class="sh"><div class="st">Player Rankings</div></div>
-  <div id="lb-list"></div>
+
+  <!-- Tab toggle -->
+  <div style="display:flex;gap:6px;margin-bottom:14px">
+    <button class="lb-tab active" id="lbt-overall" onclick="setLbTab('overall')">🏆 Overall Rankings</button>
+    <button class="lb-tab" id="lbt-session" onclick="setLbTab('session')">📋 This Session</button>
+  </div>
+
+  <!-- Overall Rankings -->
+  <div id="lb-overall-panel">
+    <div style="font-size:10px;color:var(--gr4);margin-bottom:10px">All-time stats across every session stored in the database.</div>
+    <div id="lb-list"></div>
+  </div>
+
+  <!-- Session Rankings -->
+  <div id="lb-session-panel" style="display:none">
+    <div style="font-size:10px;color:var(--gr4);margin-bottom:10px">Stats from the <b style="color:var(--pk)" id="lb-session-name">current session</b> only.</div>
+
+    <!-- Session stat cards -->
+    <div class="stat-grid" id="session-stats" style="margin-bottom:14px"></div>
+
+    <!-- Session top performers -->
+    <div class="sh" style="margin-bottom:8px">
+      <div class="st">Session Leaderboard</div>
+    </div>
+    <div id="lb-session-list"></div>
+
+    <div class="gdiv"></div>
+
+    <!-- Match log for this session -->
+    <div class="sh" style="margin-bottom:8px">
+      <div class="st">Session Match Log</div>
+      <span class="chip" id="session-match-count">0 matches</span>
+    </div>
+    <div id="lb-session-log" class="slist" style="max-height:280px"></div>
+  </div>
 </div>
 
 </div>
@@ -1014,18 +1052,7 @@ function render(){
   // Payment
   renderPayment();
 
-  // Leaderboard
-  const lb=document.getElementById('lb-list');
-  if(lb){
-    const ranked=[...S.players].filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a)||b.wins-a.wins);
-    lb.innerHTML=ranked.length?ranked.map((p,i)=>`
-      <div class="lb-row">
-        <div class="lb-rank ${['r1','r2','r3'][i]||'rn'}">${i+1}</div>${avHtml(p,26)}
-        <div class="lb-name">${p.name}<br><span style="font-size:9px;color:var(--gr4)">${SKILL_N[p.skill]}</span></div>
-        <div class="lb-stat">${p.matches}G</div><div class="lb-stat">${p.wins}W/${p.losses}L</div>
-        <div class="lb-wr">${wr(p)}%</div>
-      </div>`).join(''):`<div class="empty-state">Play some matches to see rankings</div>`;
-  }
+  renderLeaderboard();
 
   // Global stats
   const gs=document.getElementById('global-stats');
@@ -1036,6 +1063,115 @@ function render(){
       <div class="stat-c"><div class="stat-v">${S.players.length}</div><div class="stat-l">Players</div></div>
       <div class="stat-c"><div class="stat-v">${S.players.filter(p=>p.onCourt).length}</div><div class="stat-l">On Court</div></div>
       <div class="stat-c"><div class="stat-v" style="font-size:15px">${topP?topP.name.split(' ')[0]:'—'}</div><div class="stat-l">Top Player</div></div>`;
+  }
+}
+
+/* ── Leaderboard ── */
+let lbTab = 'overall';
+
+function setLbTab(tab){
+  lbTab = tab;
+  document.getElementById('lbt-overall').classList.toggle('active', tab==='overall');
+  document.getElementById('lbt-session').classList.toggle('active', tab==='session');
+  document.getElementById('lb-overall-panel').style.display = tab==='overall'?'block':'none';
+  document.getElementById('lb-session-panel').style.display = tab==='session'?'block':'none';
+  renderLeaderboard();
+}
+
+function lbRowHtml(p, i, wins, losses, matches, extra){
+  const rate = matches ? Math.round(wins/matches*100) : 0;
+  const rc = ['r1','r2','r3'][i]||'rn';
+  return `<div class="lb-row">
+    <div class="lb-rank ${rc}">${i+1}</div>${avHtml(p,26)}
+    <div class="lb-name">${p.name}<br><span style="font-size:9px;color:var(--gr4)">${SKILL_N[p.skill]}${extra?` · ${extra}`:''}</span></div>
+    <div class="lb-stat">${matches}G</div>
+    <div class="lb-stat">${wins}W/${losses}L</div>
+    <div class="lb-wr">${rate}%</div>
+  </div>`;
+}
+
+function renderLeaderboard(){
+  if(lbTab === 'overall'){
+    const lb = document.getElementById('lb-list');
+    if(!lb) return;
+    const ranked = [...S.players].filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a)||b.wins-a.wins);
+    lb.innerHTML = ranked.length
+      ? ranked.map((p,i) => lbRowHtml(p, i, p.wins, p.losses, p.matches, '')).join('')
+      : `<div class="empty-state">No matches recorded yet — overall stats build up over multiple sessions.</div>`;
+
+  } else {
+    // Session tab — derive stats from this session's match log
+    const sessionLog = S.log; // all matches this session
+    const sessionEl = document.getElementById('lb-session-name');
+    if(sessionEl){
+      const mgr = S.manager;
+      sessionEl.textContent = mgr.name
+        ? `${mgr.name}'s session${mgr.date?' · '+new Date(mgr.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):''}${mgr.venue?' · '+mgr.venue:''}`
+        : 'current session';
+    }
+
+    // Build per-player session stats from match log
+    const sessionStats = {}; // name -> {wins, losses, matches}
+    sessionLog.forEach(entry => {
+      const team1Names = entry.t1.split(' & ');
+      const team2Names = entry.t2.split(' & ');
+      const winnerNames = entry.winner.split(' & ');
+      [...team1Names, ...team2Names].forEach(name => {
+        if(!sessionStats[name]) sessionStats[name] = {wins:0, losses:0, matches:0};
+        sessionStats[name].matches++;
+        if(winnerNames.includes(name)) sessionStats[name].wins++;
+        else sessionStats[name].losses++;
+      });
+    });
+
+    // Match session stats to player objects
+    const sessionPlayers = S.players
+      .filter(p => sessionStats[p.name])
+      .map(p => ({...p, sWins: sessionStats[p.name].wins, sLosses: sessionStats[p.name].losses, sMatches: sessionStats[p.name].matches}))
+      .sort((a,b) => {
+        const wrA = a.sMatches?Math.round(a.sWins/a.sMatches*100):0;
+        const wrB = b.sMatches?Math.round(b.sWins/b.sMatches*100):0;
+        return wrB - wrA || b.sWins - a.sWins;
+      });
+
+    // Session stat cards
+    const sStat = document.getElementById('session-stats');
+    if(sStat){
+      const totalMatches = sessionLog.length;
+      const totalPlayers = Object.keys(sessionStats).length;
+      const topSession = sessionPlayers[0];
+      const mostActive = [...sessionPlayers].sort((a,b)=>b.sMatches-a.sMatches)[0];
+      sStat.innerHTML = `
+        <div class="stat-c"><div class="stat-v">${totalMatches}</div><div class="stat-l">Matches</div></div>
+        <div class="stat-c"><div class="stat-v">${totalPlayers}</div><div class="stat-l">Players</div></div>
+        <div class="stat-c"><div class="stat-v" style="font-size:14px">${topSession?topSession.name.split(' ')[0]:'—'}</div><div class="stat-l">Best Win %</div></div>
+        <div class="stat-c"><div class="stat-v" style="font-size:14px">${mostActive?mostActive.name.split(' ')[0]:'—'}</div><div class="stat-l">Most Active</div></div>`;
+    }
+
+    // Session leaderboard
+    const sLb = document.getElementById('lb-session-list');
+    if(sLb){
+      sLb.innerHTML = sessionPlayers.length
+        ? sessionPlayers.map((p,i) => lbRowHtml(p, i, p.sWins, p.sLosses, p.sMatches, `${p.sMatches} this session`)).join('')
+        : `<div class="empty-state">No matches played this session yet.</div>`;
+    }
+
+    // Session match count chip
+    const smc = document.getElementById('session-match-count');
+    if(smc) smc.textContent = sessionLog.length + ' match' + (sessionLog.length!==1?'es':'');
+
+    // Session match log
+    const sLog = document.getElementById('lb-session-log');
+    if(sLog){
+      sLog.innerHTML = sessionLog.length
+        ? sessionLog.map(e=>`
+          <div class="log-e">
+            <div class="log-t">${e.time} · Court ${e.court} · <span class="mode-tag ${MODE_C[e.mode]||'md'}" style="font-size:9px;padding:1px 4px">${e.mode}</span> · ⏱ ${e.duration}</div>
+            <div class="log-m">${e.t1} vs ${e.t2}</div>
+            <div class="log-s">${e.s1} : ${e.s2} · ${e.winner} wins</div>
+          </div>`).join('')
+        : `<div class="empty-state">No matches recorded this session.</div>`;
+    }
   }
 }
 
