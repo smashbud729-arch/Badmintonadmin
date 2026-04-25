@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Smash Hub — Badminton Queue Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -989,13 +990,15 @@ function toast(msg){
 }
 
 /* ════════════════════════════════════════
-   SUPABASE INTEGRATION
+   SUPABASE INTEGRATION — official JS client
    ════════════════════════════════════════ */
-const SB_URL  = 'https://qkimdpmrpoulmatevhcw.supabase.co';
-const SB_KEY  = 'sb_publishable_yVhH4U0zyfu_wgQn7-Fr8g_ercIEu22';
-const SB_HDR  = {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=representation'};
+const SB_URL = 'https://qkimdpmrpoulmatevhcw.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraW1kcG1ycG91bG1hdGV2aGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwOTMzNTgsImV4cCI6MjA5MjY2OTM1OH0.Nxif0lvQHdUAkLJKrfhfsKYt6eDA5C0to1b1eP39BhU';
 
-let currentSessionId = null; // UUID of the active session row in Supabase
+// Use the official Supabase client loaded via CDN (see <head>)
+const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+
+let currentSessionId = null;
 
 function syncStatus(state, msg){
   const dot=document.getElementById('sync-dot');
@@ -1005,66 +1008,49 @@ function syncStatus(state, msg){
   lbl.textContent=msg;
 }
 
-async function sbFetch(path, method='GET', body=null){
-  const opts={method, headers:SB_HDR};
-  if(body) opts.body=JSON.stringify(body);
-  try{
-    const r=await fetch(SB_URL+'/rest/v1/'+path, opts);
-    if(!r.ok){
-      const err=await r.text();
-      console.error('Supabase error:', r.status, err);
-      return null;
-    }
-    const text=await r.text();
-    return text?JSON.parse(text):null;
-  }catch(e){
-    console.error('Supabase fetch failed:',e);
-    return null;
-  }
-}
-
 /* ── Session ── */
 async function ensureSession(){
   if(currentSessionId) return currentSessionId;
   syncStatus('busy','Creating session…');
   const mgr=S.manager;
-  const row={
+  const {data,error}=await supabase.from('sessions').insert({
     manager_name: mgr.name||'Admin',
     session_date: mgr.date||new Date().toISOString().slice(0,10),
     venue: mgr.venue||''
-  };
-  const res=await sbFetch('sessions','POST',row);
-  if(res&&res[0]){
-    currentSessionId=res[0].id;
-    syncStatus('ok','Session active · '+currentSessionId.slice(0,8));
-    return currentSessionId;
-  }
-  syncStatus('err','Could not create session');
-  return null;
+  }).select();
+  if(error){console.error('Session error:',error);syncStatus('err','Session failed: '+error.message);return null;}
+  currentSessionId=data[0].id;
+  syncStatus('ok','Session active · '+currentSessionId.slice(0,8));
+  return currentSessionId;
 }
 
 /* ── Players ── */
 async function dbSavePlayer(p){
   syncStatus('busy','Saving player…');
   const row={name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,wins:p.wins,losses:p.losses,matches:p.matches};
-  let res;
+  let error,data;
   if(p.dbId){
-    res=await sbFetch(`players?id=eq.${p.dbId}`,'PATCH',row);
+    ({data,error}=await supabase.from('players').update(row).eq('id',p.dbId).select());
   } else {
-    res=await sbFetch('players','POST',row);
-    if(res&&res[0]) p.dbId=res[0].id;
+    ({data,error}=await supabase.from('players').insert(row).select());
+    if(!error&&data&&data[0]) p.dbId=data[0].id;
   }
-  syncStatus(res?'ok':'err', res?'Player saved ✓':'Save failed');
+  if(error){console.error('Save player error:',error);syncStatus('err','Save failed: '+error.message);}
+  else syncStatus('ok','Player saved ✓');
 }
 
 async function dbUpdatePlayerStats(p){
   if(!p.dbId) return;
-  await sbFetch(`players?id=eq.${p.dbId}`,'PATCH',{wins:p.wins,losses:p.losses,matches:p.matches});
+  const {error}=await supabase.from('players').update({wins:p.wins,losses:p.losses,matches:p.matches}).eq('id',p.dbId);
+  if(error) console.error('Stats update error:',error);
+  else syncStatus('ok','Stats updated ✓');
 }
 
 async function dbDeletePlayer(p){
   if(!p.dbId) return;
-  await sbFetch(`players?id=eq.${p.dbId}`,'DELETE');
+  const {error}=await supabase.from('players').delete().eq('id',p.dbId);
+  if(error) console.error('Delete error:',error);
+  else syncStatus('ok','Player deleted');
 }
 
 /* ── Match log ── */
@@ -1072,7 +1058,7 @@ async function dbSaveMatch(entry){
   const sid=await ensureSession();
   if(!sid) return;
   syncStatus('busy','Saving match…');
-  const row={
+  const {data,error}=await supabase.from('matches').insert({
     session_id:sid,
     court_number:entry.court,
     mode:entry.mode,
@@ -1082,10 +1068,9 @@ async function dbSaveMatch(entry){
     score2:entry.s2,
     winner:entry.winner,
     duration:entry.duration
-  };
-  const res=await sbFetch('matches','POST',row);
-  if(res&&res[0]) entry.dbId=res[0].id;
-  syncStatus(res?'ok':'err', res?'Match saved ✓':'Match save failed');
+  }).select();
+  if(error){console.error('Match save error:',error);syncStatus('err','Match save failed: '+error.message);}
+  else{if(data&&data[0])entry.dbId=data[0].id;syncStatus('ok','Match saved ✓');}
 }
 
 /* ── Payment ── */
@@ -1096,21 +1081,22 @@ async function dbSavePayment(playerId, fee){
   if(!p) return;
   const pay=S.pay[playerId]||{status:'unpaid',note:''};
   const row={session_id:sid,player_name:p.name,amount:fee,status:pay.status,note:pay.note||''};
+  let error,data;
   if(pay.dbId){
-    await sbFetch(`payments?id=eq.${pay.dbId}`,'PATCH',row);
+    ({data,error}=await supabase.from('payments').update(row).eq('id',pay.dbId).select());
   } else {
-    const res=await sbFetch('payments','POST',row);
-    if(res&&res[0]) pay.dbId=res[0].id;
+    ({data,error}=await supabase.from('payments').insert(row).select());
+    if(!error&&data&&data[0]) pay.dbId=data[0].id;
   }
+  if(error) console.error('Payment save error:',error);
 }
 
 /* ── Load from DB ── */
 async function loadFromDB(){
   syncStatus('busy','Loading from database…');
-  const players=await sbFetch('players?select=*&order=created_at.desc&limit=200');
-  if(!players){syncStatus('err','Failed to load players');return}
-  if(players.length>0){
-    // Merge: load all stored players into session, avoid duplicates by dbId
+  const {data:players,error}=await supabase.from('players').select('*').order('created_at',{ascending:false}).limit(200);
+  if(error){syncStatus('err','Failed to load: '+error.message);return;}
+  if(players&&players.length>0){
     players.forEach(row=>{
       const exists=S.players.find(p=>p.dbId===row.id);
       if(!exists){
@@ -1127,6 +1113,7 @@ async function loadFromDB(){
     toast(`Loaded ${players.length} players from Supabase ↓`);
   } else {
     syncStatus('ok','Database is empty — start adding players');
+    toast('No players in DB yet');
   }
 }
 
@@ -1134,32 +1121,26 @@ async function loadFromDB(){
 async function syncAll(){
   syncStatus('busy','Syncing all data…');
   await ensureSession();
-  // Sync all players
-  for(const p of S.players){
-    await dbSavePlayer(p);
-  }
-  // Sync payments
+  for(const p of S.players){ await dbSavePlayer(p); }
   const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
-  for(const p of S.players){
-    await dbSavePayment(p.id, fee);
-  }
+  for(const p of S.players){ await dbSavePayment(p.id,fee); }
   syncStatus('ok',`Synced ${S.players.length} players · ${S.log.length} matches`);
   toast('All data synced to Supabase ✓');
 }
 
-/* ── DB hooks are called directly from the core functions below ── */
+/* ── DB hooks are called directly from the core functions ── */
 
 // Auto-connect on load
 async function initSupabase(){
   syncStatus('busy','Connecting…');
-  // Ping players table
-  const test=await sbFetch('players?select=id&limit=1');
-  if(test!==null){
+  const {error}=await supabase.from('players').select('id').limit(1);
+  if(!error){
     syncStatus('ok','Connected to Supabase ✓');
     toast('Supabase connected ✓');
   } else {
-    syncStatus('err','Cannot reach Supabase — check key/tables');
+    syncStatus('err','Cannot reach Supabase: '+error.message);
     toast('⚠ Supabase connection failed — check console');
+    console.error('Supabase init error:',error);
   }
 }
 
