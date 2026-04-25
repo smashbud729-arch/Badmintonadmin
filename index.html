@@ -670,7 +670,12 @@ function renderAllPlayers(){
         </div>
         <div class="sk ${SKILL_C[p.skill]}">${SKILL_N[p.skill]}</div>
         <button class="btn btn-xs btn-o" onclick="toggleEditSkill(${p.id})" style="margin-left:4px" title="Edit skill level">✎</button>
-        <button class="btn btn-sm ${p.onCourt?'btn-blue':p.inQueue?'btn-red':'btn-o'}" onclick="${p.onCourt?'':('toggleQueue('+p.id+')')}" ${p.onCourt?'disabled':''} style="min-width:58px;margin-left:4px">${p.onCourt?'On Court':p.inQueue?'Dequeue':'+ Queue'}</button>
+        <button class="btn btn-sm ${p.onCourt?'btn-blue':p.inQueue?'btn-red':'btn-o'}"
+          onclick="toggleQueue(${p.id})"
+          ${p.onCourt?'disabled':''}
+          style="min-width:58px;margin-left:4px">
+          ${p.onCourt?'On Court':p.inQueue?'Dequeue':'+ Queue'}
+        </button>
         <button class="btn btn-red btn-xs" onclick="removePlayer(${p.id})" ${p.onCourt?'disabled':''} style="margin-left:4px">✕</button>
       </div>
       ${S.editingSkill===p.id?`<div class="edit-skill-row">
