@@ -482,6 +482,9 @@ function saveManager(){
   }
   document.getElementById('mgr-modal').classList.remove('open');
   toast('Session saved ✓');
+  // Create a fresh session row in Supabase with updated info
+  currentSessionId=null;
+  ensureSession().catch(e=>console.error('Session create failed:',e));
 }
 
 /* ── Courts ── */
@@ -521,15 +524,21 @@ function endMatch(ci,winner){
   const winners=winner===1?m.team1:m.team2,losers=winner===1?m.team2:m.team1;
   winners.forEach(p=>{p.wins++;p.matches++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
   losers.forEach(p=>{p.losses++;p.matches++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
-  S.log.unshift({
+  const entry={
     time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
     mode:m.mode,court:court.id,duration:fmtTime(court.elapsed),
     t1:m.team1.map(p=>p.name).join(' & '),t2:m.team2.map(p=>p.name).join(' & '),
     s1:m.score1,s2:m.score2,
     winner:winner===1?m.team1.map(p=>p.name).join(' & '):m.team2.map(p=>p.name).join(' & ')
-  });
+  };
+  S.log.unshift(entry);
   court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
   toast('Match recorded — great game!');render();
+  // Save match + update all player stats in DB (non-blocking)
+  dbSaveMatch(entry).catch(e=>console.error('DB match save failed:',e));
+  [...winners,...losers].forEach(p=>{
+    dbUpdatePlayerStats(p).catch(e=>console.error('DB stats update failed:',e));
+  });
 }
 
 function cancelMatch(ci){
@@ -764,6 +773,8 @@ function addPlayer(){
   S.players.push(p);S.queue.push(p.id);S.pay[p.id]={status:'unpaid',note:''};
   document.getElementById('p-name').value='';
   toast(p.name+' added to session');render();
+  // Save to Supabase asynchronously (non-blocking)
+  dbSavePlayer(p).catch(e=>console.error('DB save player failed:',e));
 }
 function toggleQueue(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
@@ -775,12 +786,15 @@ function removePlayer(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
   S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);delete S.pay[pid_];
   toast(p.name+' removed');render();
+  if(p.dbId) dbDeletePlayer(p).catch(e=>console.error('DB delete failed:',e));
 }
 
 /* ── Payment ── */
 function setPayStatus(pid_,status){
   if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};
   S.pay[pid_].status=status;renderPayment();
+  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
+  dbSavePayment(pid_,fee).catch(e=>console.error('DB pay save failed:',e));
 }
 function setPayNote(pid_,note){if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};S.pay[pid_].note=note}
 
@@ -1133,50 +1147,7 @@ async function syncAll(){
   toast('All data synced to Supabase ✓');
 }
 
-/* ── Wrap original functions to auto-save ── */
-const _origAddPlayer=addPlayer;
-async function addPlayer(){
-  _origAddPlayer();
-  // After adding, save to DB (last player added)
-  const p=S.players[S.players.length-1];
-  if(p) await dbSavePlayer(p);
-}
-
-const _origEndMatch=endMatch;
-async function endMatch(ci,winner){
-  _origEndMatch(ci,winner);
-  // Save match + update player stats
-  const entry=S.log[0]; // most recent
-  await dbSaveMatch(entry);
-  // Update stats for all players in that match
-  const allInMatch=[...S.courts[ci]?.match?.team1||[],...S.courts[ci]?.match?.team2||[]];
-  // Since match ended, get involved players from the log entry
-  const names=[...entry.t1.split(' & '),...entry.t2.split(' & ')];
-  for(const p of S.players){
-    if(names.includes(p.name)) await dbUpdatePlayerStats(p);
-  }
-}
-
-const _origRemovePlayer=removePlayer;
-async function removePlayer(pid_){
-  const p=pid(pid_);
-  _origRemovePlayer(pid_);
-  if(p) await dbDeletePlayer(p);
-}
-
-const _origSaveManager=saveManager;
-async function saveManager(){
-  _origSaveManager();
-  currentSessionId=null; // reset so a new session row is created with updated info
-  await ensureSession();
-}
-
-const _origSetPayStatus=setPayStatus;
-async function setPayStatus(pid_,status){
-  _origSetPayStatus(pid_,status);
-  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
-  await dbSavePayment(pid_,fee);
-}
+/* ── DB hooks are called directly from the core functions below ── */
 
 // Auto-connect on load
 async function initSupabase(){
