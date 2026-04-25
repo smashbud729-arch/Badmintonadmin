@@ -665,7 +665,9 @@ function saveSkill(pid_,val){
 function renderAllPlayers(){
   const ap=document.getElementById('all-players');if(!ap)return;
   document.getElementById('pl-total').textContent=S.players.length;
-  ap.innerHTML=S.players.length?S.players.map(p=>`
+  // Always display alphabetically for easy navigation
+  const sorted=[...S.players].sort((a,b)=>a.name.localeCompare(b.name));
+  ap.innerHTML=sorted.length?sorted.map(p=>`
     <div>
       <div class="pl-item">
         ${avHtml(p)}
