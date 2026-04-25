@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Smash Hub — Badminton Queue Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -996,7 +996,17 @@ const SB_URL = 'https://qkimdpmrpoulmatevhcw.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraW1kcG1ycG91bG1hdGV2aGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwOTMzNTgsImV4cCI6MjA5MjY2OTM1OH0.Nxif0lvQHdUAkLJKrfhfsKYt6eDA5C0to1b1eP39BhU';
 
 // Use the official Supabase client loaded via CDN (see <head>)
-const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+// Lazy-init: only created when first used so a CDN failure won't crash the app
+let _supabase = null;
+function getSupabase(){
+  if(_supabase) return _supabase;
+  if(window.supabase && window.supabase.createClient){
+    _supabase = window.supabase.createClient(SB_URL, SB_KEY);
+    return _supabase;
+  }
+  console.error('Supabase CDN not loaded yet');
+  return null;
+}
 
 let currentSessionId = null;
 
@@ -1011,9 +1021,11 @@ function syncStatus(state, msg){
 /* ── Session ── */
 async function ensureSession(){
   if(currentSessionId) return currentSessionId;
+  const sb=getSupabase();
+  if(!sb){syncStatus('err','Supabase not loaded');return null;}
   syncStatus('busy','Creating session…');
   const mgr=S.manager;
-  const {data,error}=await supabase.from('sessions').insert({
+  const {data,error}=await sb.from('sessions').insert({
     manager_name: mgr.name||'Admin',
     session_date: mgr.date||new Date().toISOString().slice(0,10),
     venue: mgr.venue||''
@@ -1026,77 +1038,74 @@ async function ensureSession(){
 
 /* ── Players ── */
 async function dbSavePlayer(p){
+  const sb=getSupabase();if(!sb)return;
   syncStatus('busy','Saving player…');
   const row={name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,wins:p.wins,losses:p.losses,matches:p.matches};
-  let error,data;
+  let res;
   if(p.dbId){
-    ({data,error}=await supabase.from('players').update(row).eq('id',p.dbId).select());
+    res=await sb.from('players').update(row).eq('id',p.dbId).select();
   } else {
-    ({data,error}=await supabase.from('players').insert(row).select());
-    if(!error&&data&&data[0]) p.dbId=data[0].id;
+    res=await sb.from('players').insert(row).select();
+    if(!res.error&&res.data&&res.data[0]) p.dbId=res.data[0].id;
   }
-  if(error){console.error('Save player error:',error);syncStatus('err','Save failed: '+error.message);}
+  if(res.error){console.error('Save player error:',res.error);syncStatus('err','Save failed: '+res.error.message);}
   else syncStatus('ok','Player saved ✓');
 }
 
 async function dbUpdatePlayerStats(p){
-  if(!p.dbId) return;
-  const {error}=await supabase.from('players').update({wins:p.wins,losses:p.losses,matches:p.matches}).eq('id',p.dbId);
-  if(error) console.error('Stats update error:',error);
+  const sb=getSupabase();if(!sb||!p.dbId)return;
+  const res=await sb.from('players').update({wins:p.wins,losses:p.losses,matches:p.matches}).eq('id',p.dbId);
+  if(res.error) console.error('Stats update error:',res.error);
   else syncStatus('ok','Stats updated ✓');
 }
 
 async function dbDeletePlayer(p){
-  if(!p.dbId) return;
-  const {error}=await supabase.from('players').delete().eq('id',p.dbId);
-  if(error) console.error('Delete error:',error);
+  const sb=getSupabase();if(!sb||!p.dbId)return;
+  const res=await sb.from('players').delete().eq('id',p.dbId);
+  if(res.error) console.error('Delete error:',res.error);
   else syncStatus('ok','Player deleted');
 }
 
 /* ── Match log ── */
 async function dbSaveMatch(entry){
-  const sid=await ensureSession();
-  if(!sid) return;
+  const sid=await ensureSession();if(!sid)return;
+  const sb=getSupabase();if(!sb)return;
   syncStatus('busy','Saving match…');
-  const {data,error}=await supabase.from('matches').insert({
-    session_id:sid,
-    court_number:entry.court,
-    mode:entry.mode,
-    team1:entry.t1,
-    team2:entry.t2,
-    score1:entry.s1,
-    score2:entry.s2,
-    winner:entry.winner,
-    duration:entry.duration
+  const res=await sb.from('matches').insert({
+    session_id:sid,court_number:entry.court,mode:entry.mode,
+    team1:entry.t1,team2:entry.t2,score1:entry.s1,score2:entry.s2,
+    winner:entry.winner,duration:entry.duration
   }).select();
-  if(error){console.error('Match save error:',error);syncStatus('err','Match save failed: '+error.message);}
-  else{if(data&&data[0])entry.dbId=data[0].id;syncStatus('ok','Match saved ✓');}
+  if(res.error){console.error('Match save error:',res.error);syncStatus('err','Match save failed');}
+  else{if(res.data&&res.data[0])entry.dbId=res.data[0].id;syncStatus('ok','Match saved ✓');}
 }
 
 /* ── Payment ── */
-async function dbSavePayment(playerId, fee){
-  const sid=await ensureSession();
-  if(!sid) return;
-  const p=pid(playerId);
-  if(!p) return;
+async function dbSavePayment(playerId,fee){
+  const sid=await ensureSession();if(!sid)return;
+  const sb=getSupabase();if(!sb)return;
+  const p=pid(playerId);if(!p)return;
   const pay=S.pay[playerId]||{status:'unpaid',note:''};
   const row={session_id:sid,player_name:p.name,amount:fee,status:pay.status,note:pay.note||''};
-  let error,data;
+  let res;
   if(pay.dbId){
-    ({data,error}=await supabase.from('payments').update(row).eq('id',pay.dbId).select());
+    res=await sb.from('payments').update(row).eq('id',pay.dbId).select();
   } else {
-    ({data,error}=await supabase.from('payments').insert(row).select());
-    if(!error&&data&&data[0]) pay.dbId=data[0].id;
+    res=await sb.from('payments').insert(row).select();
+    if(!res.error&&res.data&&res.data[0]) pay.dbId=res.data[0].id;
   }
-  if(error) console.error('Payment save error:',error);
+  if(res.error) console.error('Payment save error:',res.error);
 }
 
 /* ── Load from DB ── */
 async function loadFromDB(){
+  const sb=getSupabase();
+  if(!sb){toast('⚠ Supabase not ready');return;}
   syncStatus('busy','Loading from database…');
-  const {data:players,error}=await supabase.from('players').select('*').order('created_at',{ascending:false}).limit(200);
-  if(error){syncStatus('err','Failed to load: '+error.message);return;}
-  if(players&&players.length>0){
+  const res=await sb.from('players').select('*').order('created_at',{ascending:false}).limit(200);
+  if(res.error){syncStatus('err','Failed to load: '+res.error.message);return;}
+  const players=res.data||[];
+  if(players.length>0){
     players.forEach(row=>{
       const exists=S.players.find(p=>p.dbId===row.id);
       if(!exists){
@@ -1119,6 +1128,8 @@ async function loadFromDB(){
 
 /* ── Sync everything ── */
 async function syncAll(){
+  const sb=getSupabase();
+  if(!sb){toast('⚠ Supabase not ready');return;}
   syncStatus('busy','Syncing all data…');
   await ensureSession();
   for(const p of S.players){ await dbSavePlayer(p); }
@@ -1133,14 +1144,20 @@ async function syncAll(){
 // Auto-connect on load
 async function initSupabase(){
   syncStatus('busy','Connecting…');
-  const {error}=await supabase.from('players').select('id').limit(1);
-  if(!error){
+  const sb=getSupabase();
+  if(!sb){
+    syncStatus('err','Supabase CDN failed to load');
+    toast('⚠ Supabase CDN not loaded');
+    return;
+  }
+  const res=await sb.from('players').select('id').limit(1);
+  if(!res.error){
     syncStatus('ok','Connected to Supabase ✓');
     toast('Supabase connected ✓');
   } else {
-    syncStatus('err','Cannot reach Supabase: '+error.message);
-    toast('⚠ Supabase connection failed — check console');
-    console.error('Supabase init error:',error);
+    syncStatus('err','DB error: '+res.error.message);
+    toast('⚠ Supabase error — check console');
+    console.error('Supabase init error:',res.error);
   }
 }
 
