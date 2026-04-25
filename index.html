@@ -152,11 +152,9 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .sk1{background:#EDFAF4;color:#2E7D52}.sk2{background:#EEF3FF;color:var(--male)}
 .sk3{background:#FFF4EC;color:#C06020}.sk4{background:#FFEEF2;color:var(--pkd)}.sk5{background:var(--pkd);color:#fff}
 .q-pos{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gr3);width:18px;text-align:center;flex-shrink:0}
-/* Edit skill */
-.edit-skill-row{display:flex;align-items:center;gap:6px;padding:6px 11px 8px;background:var(--b3);border:1px solid var(--pkl);border-radius:0 0 8px 8px;margin-top:-6px;margin-bottom:6px}
-.edit-skill-row label{font-size:10px;color:var(--gr4);white-space:nowrap}
-.edit-skill-row input[type=range]{flex:1;accent-color:var(--pk)}
-.edit-skill-val{font-size:11px;font-weight:700;color:var(--pk);min-width:84px}
+/* Edit skill dropdown row */
+.edit-skill-row{display:flex;align-items:center;gap:8px;padding:8px 11px 10px;background:var(--b3);border:1px solid var(--pkl);border-radius:0 0 8px 8px;margin-top:-6px;margin-bottom:6px}
+.edit-skill-row label{font-size:10px;color:var(--gr4);white-space:nowrap;text-transform:uppercase;letter-spacing:0.06em}
 /* Sort bar */
 .sort-bar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
 .sort-btn{padding:3px 9px;border-radius:4px;border:1px solid var(--gr2);background:var(--b2);color:var(--gr4);cursor:pointer;font-size:10px;font-weight:600;transition:all 0.15s;font-family:'DM Sans',sans-serif}
@@ -383,24 +381,25 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
             <select class="fc" id="p-gender"><option value="M">Male</option><option value="F">Female</option></select>
           </div>
         </div>
-        <div class="fg">
-          <label>Skill Level — <span id="skill-lbl" style="color:var(--g)">3 · Intermediate</span></label>
-          <input type="range" min="1" max="5" value="3" step="1" class="skill-slider" id="p-skill" oninput="updSkill(this.value)"/>
-          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--gr4);margin-top:2px">
-            <span>Beginner</span><span>Recreational</span><span>Intermediate</span><span>Advanced</span><span>Elite</span>
-          </div>
-        </div>
         <div class="form-row">
+          <div class="fg">
+            <label>Skill Level</label>
+            <select class="fc" id="p-skill">
+              <option value="1">1 · Beginner</option>
+              <option value="2">2 · Recreational</option>
+              <option value="3" selected>3 · Intermediate</option>
+              <option value="4">4 · Advanced</option>
+              <option value="5">5 · Elite</option>
+            </select>
+          </div>
           <div class="fg"><label>Preferred Mode</label>
             <select class="fc" id="p-mode">
               <option value="any">Any</option><option value="singles">Singles</option>
               <option value="doubles">Doubles</option><option value="mixed">Mixed Doubles</option>
             </select>
           </div>
-          <div class="fg" style="justify-content:flex-end">
-            <button class="btn btn-g" style="width:100%;margin-top:auto" onclick="addPlayer()">+ Add to Session</button>
-          </div>
         </div>
+        <button class="btn btn-g" style="width:100%;margin-top:4px" onclick="addPlayer()">+ Add to Session</button>
       </div>
       <div class="sh"><div class="st">All Players</div><span class="chip" id="pl-total">0</span></div>
       <div class="slist" id="all-players"></div>
@@ -507,10 +506,6 @@ function toggleEditSkill(pid_){
   S.editingSkill=S.editingSkill===pid_?null:pid_;
   renderAllPlayers();
 }
-function updateEditSkillDisplay(pid_,val){
-  const el=document.getElementById('skill-edit-val-'+pid_);
-  if(el) el.textContent=val+' · '+SKILL_N[val];
-}
 function saveSkill(pid_,val){
   const p=pid(pid_);if(!p)return;
   p.skill=parseInt(val);S.editingSkill=null;
@@ -536,8 +531,13 @@ function renderAllPlayers(){
       </div>
       ${S.editingSkill===p.id?`<div class="edit-skill-row">
         <label>Skill level:</label>
-        <input type="range" min="1" max="5" step="1" value="${p.skill}" oninput="updateEditSkillDisplay(${p.id},this.value)" onchange="saveSkill(${p.id},this.value)"/>
-        <span class="edit-skill-val" id="skill-edit-val-${p.id}">${p.skill} · ${SKILL_N[p.skill]}</span>
+        <select onchange="saveSkill(${p.id},this.value)" style="flex:1;background:var(--b2);border:1.5px solid var(--pkl);border-radius:6px;color:var(--w);padding:5px 8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer">
+          <option value="1" ${p.skill===1?'selected':''}>1 · Beginner</option>
+          <option value="2" ${p.skill===2?'selected':''}>2 · Recreational</option>
+          <option value="3" ${p.skill===3?'selected':''}>3 · Intermediate</option>
+          <option value="4" ${p.skill===4?'selected':''}>4 · Advanced</option>
+          <option value="5" ${p.skill===5?'selected':''}>5 · Elite</option>
+        </select>
         <button class="btn btn-xs btn-o" onclick="S.editingSkill=null;renderAllPlayers()">Cancel</button>
       </div>`:''}
     </div>`).join('')
@@ -845,7 +845,6 @@ function updateBuilderUI(){
 }
 
 /* ── Players ── */
-function updSkill(v){document.getElementById('skill-lbl').textContent=v+' · '+SKILL_N[v]}
 function addPlayer(){
   const name=document.getElementById('p-name').value.trim();
   if(!name){toast('Enter a player name');return}
