@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smash Hub — Badminton Queue Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#C9A84C;--gl:#E8C97A;--gd:#9A6F28;--gg:#C9A84C15;
+  --b:#0A0A0A;--b2:#111;--b3:#181818;--b4:#222;
+  --gr:#2E2E2E;--gr2:#3A3A3A;--gr3:#555;--gr4:#888;
+  --w:#F0EBE0;--w2:#DDD8CE;
+  --male:#7AB8E8;--female:#E8A0C9;
+  --green:#1A5C2A;--greenl:#2EA84A;
+  --red:#6A1818;--redl:#B03030;
+  --blue:#1A3A6A;--bluel:#3A78C9;
+}
+html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* Header */
+.hdr{background:var(--b2);border-bottom:2px solid var(--gd);padding:10px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--g);letter-spacing:0.14em}
+.logo-sub{font-size:9px;color:var(--gr4);letter-spacing:0.2em;text-transform:uppercase;margin-top:-2px}
+.mgr-badge{display:flex;align-items:center;gap:7px;background:var(--b3);border:1px solid var(--gd);border-radius:5px;padding:5px 11px;cursor:pointer;transition:border-color 0.2s}
+.mgr-badge:hover{border-color:var(--g)}
+.mgr-name{font-size:12px;font-weight:600;color:var(--g)}
+.mgr-sub{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
+.hdr-stats{margin-left:auto;display:flex;gap:16px}
+.hs{text-align:center}
+.hs-v{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--g)}
+.hs-l{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
+
+/* Modal */
+.backdrop{display:none;position:fixed;inset:0;background:#000000BB;z-index:200;align-items:center;justify-content:center}
+.backdrop.open{display:flex}
+.modal{background:var(--b2);border:1px solid var(--gd);border-radius:10px;padding:22px;width:360px;max-width:95vw}
+.modal-ttl{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--g);letter-spacing:0.08em;margin-bottom:14px}
+
+/* Court ctrl */
+.court-ctrl{background:var(--b3);border-bottom:1px solid var(--gr);padding:8px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.ctrl-lbl{font-size:10px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
+.cb-wrap{display:flex;gap:5px}
+.cb{width:28px;height:28px;border-radius:4px;border:1px solid var(--gr2);background:var(--b4);color:var(--gr4);cursor:pointer;font-weight:700;font-size:12px;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.cb.active{background:var(--gd);border-color:var(--g);color:var(--b)}
+.cb:hover:not(.active){border-color:var(--g);color:var(--g)}
+.dv{width:1px;height:20px;background:var(--gr)}
+
+/* Nav */
+.nav{display:flex;background:var(--b2);border-bottom:1px solid var(--gr);flex-shrink:0}
+.nt{flex:1;padding:9px 4px;text-align:center;cursor:pointer;font-size:10px;font-weight:600;color:var(--gr4);border-bottom:2px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.06em}
+.nt.active{color:var(--g);border-bottom-color:var(--g)}
+.nt:hover:not(.active){color:var(--w2);background:var(--b3)}
+
+/* Toast */
+.toast-bar{padding:4px 18px;height:26px;flex-shrink:0;display:flex;align-items:center}
+.toast-msg{font-size:11px;font-weight:600;color:var(--g);opacity:0;transition:opacity 0.3s}
+.toast-msg.show{opacity:1}
+
+/* Main */
+.main{padding:14px;flex:1;overflow-y:auto}
+.main::-webkit-scrollbar{width:4px}
+.main::-webkit-scrollbar-thumb{background:var(--gr2);border-radius:2px}
+.view{display:none}.view.active{display:block}
+
+/* Grid */
+.two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+
+/* Section hdr */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.st{font-size:11px;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:0.1em}
+
+/* Buttons */
+.btn{padding:6px 12px;border-radius:4px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;transition:all 0.15s}
+.btn-g{background:var(--g);color:var(--b)}.btn-g:hover{background:var(--gl)}
+.btn-o{background:transparent;color:var(--g);border:1px solid var(--gd)}.btn-o:hover{background:var(--gg)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-xs{padding:3px 8px;font-size:10px;font-weight:700}
+.btn-red{background:var(--red);color:#FFB3B3;border:none}.btn-red:hover{background:var(--redl);color:#fff}
+.btn-green{background:var(--green);color:#B3FFB3;border:none}.btn-green:hover{background:var(--greenl);color:#fff}
+.btn-blue{background:var(--blue);color:#B3D4FF;border:none}.btn-blue:hover{background:var(--bluel);color:#fff}
+.btn:disabled{opacity:0.35;cursor:not-allowed}
+
+/* Court card */
+.court-card{background:var(--b2);border:1px solid var(--gr);border-radius:8px;padding:14px;margin-bottom:12px}
+.court-card.playing{border-color:var(--gd)}
+.court-hdr{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.court-num{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--g);letter-spacing:0.06em}
+.mode-toggle{display:flex;gap:3px}
+.mt-pill{padding:3px 9px;border-radius:3px;border:1px solid var(--gr2);background:var(--b4);color:var(--gr4);cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.mt-pill.sel-s{border-color:var(--male);background:#0D2030;color:var(--male)}
+.mt-pill.sel-d{border-color:#2EA84A;background:#0D2A14;color:#3DB354}
+.mt-pill.sel-m{border-color:#9A70DD;background:#200D3A;color:#C09EE8}
+.mt-pill:hover:not(.sel-s):not(.sel-d):not(.sel-m){border-color:var(--gr3);color:var(--w2)}
+.mode-tag{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+.ms{background:#1A2A3A;color:var(--male)}.md{background:#1A3A2A;color:#3DB354}.mm{background:#2A1A3A;color:#C09EE8}
+.status-dot{width:7px;height:7px;border-radius:50%}
+.dot-idle{background:var(--gr3)}.dot-on{background:#3DB354;box-shadow:0 0 5px #3DB35488}
+.timer-big{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--g);letter-spacing:0.06em;line-height:1}
+.timer-lbl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em;text-align:right;margin-top:1px}
+
+/* Match */
+.match-grid{display:grid;grid-template-columns:1fr 34px 1fr;align-items:center;gap:6px;margin-bottom:10px}
+.tc{display:flex;flex-direction:column;gap:4px}
+.ta{text-align:right}.tb{text-align:left}
+.tlbl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px}
+.pchip{display:flex;align-items:center;gap:5px;padding:4px 8px;background:var(--b4);border-radius:4px;border:1px solid var(--gr)}
+.ta .pchip{justify-content:flex-end}
+.pn{font-size:12px;font-weight:600}
+.pg{width:14px;height:14px;border-radius:50%;flex-shrink:0;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.pg-m{background:#0D2B40;color:var(--male)}.pg-f{background:#2D0D25;color:var(--female)}
+.vs{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gd);text-align:center}
+.score-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px}
+.score-inp{width:46px;height:46px;background:var(--b4);border:1px solid var(--gr2);border-radius:4px;color:var(--w);font-family:'Bebas Neue',sans-serif;font-size:24px;text-align:center;outline:none;padding:0}
+.score-sep{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--gr3)}
+.court-actions{display:flex;gap:6px;flex-wrap:wrap}
+.court-empty{padding:12px;text-align:center;color:var(--gr4);font-size:12px}
+
+/* Suggest box */
+.sug-box{background:var(--b3);border:1px solid var(--gd);border-radius:6px;padding:11px;margin-bottom:9px}
+.sug-lbl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bal-bar{height:3px;background:var(--gr);border-radius:2px;margin:7px 0 3px;overflow:hidden}
+.bal-fill{height:100%;background:var(--g);border-radius:2px;transition:width 0.5s}
+.bal-pct{font-size:9px;color:var(--g);text-align:center}
+
+/* Smash Hub Suggestions title */
+.sug-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--g);letter-spacing:0.1em;display:flex;align-items:center;gap:6px}
+
+/* Court assign */
+.court-assign-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px}
+.court-assign-lbl{font-size:10px;color:var(--gr4)}
+.court-pill{padding:3px 8px;border-radius:3px;border:1px solid var(--gr2);background:var(--b4);color:var(--gr4);cursor:pointer;font-size:10px;font-weight:700;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.court-pill.avail:hover{border-color:var(--g);color:var(--g)}
+.court-pill.busy{opacity:0.3;cursor:not-allowed}
+
+/* Player items */
+.pl-item{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--b3);border:1px solid var(--gr);border-radius:6px;margin-bottom:6px;transition:all 0.15s}
+.pl-item.sel-a{border-color:var(--male);background:#0A1A28}
+.pl-item.sel-b{border-color:#E8A04C;background:#28180A}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-weight:800;flex-shrink:0}
+.av-m{background:#0D2B40;color:var(--male);border:1px solid #1A4A6A}
+.av-f{background:#2D0D25;color:var(--female);border:1px solid #5A1A45}
+.pl-name{font-weight:600;font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-meta{font-size:10px;color:var(--gr4);margin-top:1px}
+.sk{padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;text-transform:uppercase}
+.sk1{background:#142A14;color:#5CCC5C}.sk2{background:#142030;color:var(--male)}
+.sk3{background:#2A2410;color:var(--g)}.sk4{background:#2A1810;color:#FF8844}.sk5{background:#2A1010;color:#FF4444}
+.q-pos{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gr3);width:18px;text-align:center;flex-shrink:0}
+
+/* Builder */
+.builder{background:var(--b2);border:1px solid var(--gd);border-radius:8px;padding:13px;margin-bottom:13px}
+.builder-teams{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0}
+.team-slot{background:var(--b3);border:1px solid var(--gr);border-radius:6px;padding:9px;min-height:62px}
+.team-slot-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px}
+.lbl-a{color:var(--male)}.lbl-b{color:#E8A04C}
+.slot-player{display:flex;align-items:center;gap:5px;padding:3px 6px;background:var(--b4);border-radius:4px;margin-bottom:4px;font-size:12px;font-weight:600}
+.slot-empty{font-size:11px;color:var(--gr3);font-style:italic}
+.slot-remove{margin-left:auto;background:none;border:none;color:var(--gr3);cursor:pointer;font-size:12px;padding:0 2px}
+.slot-remove:hover{color:var(--redl)}
+
+/* Form */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.fg label{font-size:10px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
+.fc{background:var(--b3);border:1px solid var(--gr);border-radius:4px;color:var(--w);padding:7px 10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%;transition:border-color 0.15s}
+.fc:focus{border-color:var(--gd)}.fc option{background:var(--b3)}
+.skill-slider{width:100%;accent-color:var(--g);margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Payment */
+.pay-row{display:flex;align-items:center;gap:9px;padding:9px 12px;background:var(--b3);border:1px solid var(--gr);border-radius:6px;margin-bottom:6px;flex-wrap:wrap}
+.pay-info{flex:1;min-width:0}
+.pay-btn{padding:4px 9px;border-radius:3px;border:1px solid var(--gr2);background:var(--b4);color:var(--gr4);cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.pay-btn.p-cash{background:#1A3A1A;border-color:#2EA84A;color:#3DB354}
+.pay-btn.p-bank{background:#1A2A3A;border-color:var(--male);color:var(--male)}
+.pay-btn.p-unpaid{background:#3A1A1A;border-color:var(--redl);color:#FF8888}
+.pay-note{background:var(--b4);border:1px solid var(--gr);border-radius:3px;color:var(--w);padding:3px 7px;font-size:11px;font-family:'DM Sans',sans-serif;outline:none;width:100px}
+.pay-note:focus{border-color:var(--gd)}
+.pay-fee-inp{background:var(--b4);border:1px solid var(--gr);border-radius:3px;color:var(--g);padding:3px 7px;font-size:13px;font-weight:700;font-family:'Bebas Neue',sans-serif;outline:none;width:60px;text-align:center}
+.pay-fee-inp:focus{border-color:var(--gd)}
+.pay-summ{display:flex;gap:16px;flex-wrap:wrap}
+.psv{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--g)}
+.psl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
+
+/* Leaderboard */
+.lb-row{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--b3);border:1px solid var(--gr);border-radius:6px;margin-bottom:6px}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:16px;width:24px;text-align:center}
+.r1{color:var(--g)}.r2{color:#CCC}.r3{color:#CD7F32}.rn{color:var(--gr3)}
+.lb-name{flex:1;font-weight:600;font-size:13px}
+.lb-stat{font-size:11px;color:var(--gr4);width:44px;text-align:right}
+.lb-wr{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--g);width:44px;text-align:right}
+
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat-c{background:var(--b3);border-radius:6px;padding:12px;text-align:center}
+.stat-v{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--g)}
+.stat-l{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.07em;margin-top:2px}
+
+/* Log */
+.log-e{padding:8px 11px;background:var(--b3);border-left:3px solid var(--gd);border-radius:0 5px 5px 0;margin-bottom:6px}
+.log-t{font-size:9px;color:var(--gr4);margin-bottom:3px}
+.log-m{font-size:12px;font-weight:600}
+.log-s{font-size:13px;font-weight:800;color:var(--g);margin-top:2px}
+
+.gdiv{height:1px;background:linear-gradient(90deg,transparent,var(--gd),transparent);margin:12px 0}
+.chip{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:var(--gg);color:var(--g);border:1px solid rgba(201,168,76,0.25)}
+.slist{max-height:340px;overflow-y:auto;padding-right:2px}
+.slist::-webkit-scrollbar{width:3px}
+.slist::-webkit-scrollbar-thumb{background:var(--gr2);border-radius:2px}
+.empty-state{text-align:center;padding:24px 16px;color:var(--gr4);font-size:12px}
+.info-note{font-size:10px;color:var(--gr4);background:var(--b4);border:1px solid var(--gr2);border-radius:3px;padding:5px 10px;margin-bottom:10px}
+.info-note b{color:var(--gl)}
+/* Supabase sync bar */
+.sync-bar{display:flex;align-items:center;gap:6px;padding:3px 14px;background:var(--b3);border-bottom:1px solid var(--gr);flex-shrink:0;min-height:22px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--gr3);flex-shrink:0;transition:background 0.3s}
+.sync-dot.ok{background:#3DB354}.sync-dot.err{background:#C44}
+.sync-dot.busy{background:var(--g);animation:sbpulse 0.8s infinite alternate}
+@keyframes sbpulse{from{opacity:0.3}to{opacity:1}}
+.sync-lbl{font-size:9px;color:var(--gr4);letter-spacing:0.05em}
+.sync-actions{margin-left:auto;display:flex;gap:6px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ MANAGER MODAL ═══ -->
+<div class="backdrop" id="mgr-modal">
+  <div class="modal">
+    <div class="modal-ttl">🏸 Session Setup</div>
+    <div class="fg"><label>Manager Name</label><input class="fc" id="mgr-name-inp" placeholder="Your name..."/></div>
+    <div class="fg"><label>Session Date</label><input class="fc" id="mgr-date-inp" type="date"/></div>
+    <div class="fg"><label>Venue / Location</label><input class="fc" id="mgr-venue-inp" placeholder="e.g. City Sports Hall"/></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-g" style="flex:1" onclick="saveManager()">Save Session</button>
+      <button class="btn btn-o" onclick="document.getElementById('mgr-modal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<div class="hdr">
+  <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+    <circle cx="18" cy="27" r="5.5" fill="#C9A84C" opacity="0.95"/>
+    <line x1="18" y1="22" x2="9"  y2="11" stroke="#C9A84C" stroke-width="1.5" opacity="0.7"/>
+    <line x1="18" y1="22" x2="13" y2="8"  stroke="#C9A84C" stroke-width="1.5" opacity="0.7"/>
+    <line x1="18" y1="22" x2="18" y2="7"  stroke="#C9A84C" stroke-width="1.5" opacity="0.7"/>
+    <line x1="18" y1="22" x2="23" y2="8"  stroke="#C9A84C" stroke-width="1.5" opacity="0.7"/>
+    <line x1="18" y1="22" x2="27" y2="11" stroke="#C9A84C" stroke-width="1.5" opacity="0.7"/>
+    <ellipse cx="18" cy="7.5" rx="6" ry="2" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.5"/>
+  </svg>
+  <div><div class="logo">Smash Hub</div><div class="logo-sub">Badminton Queue Manager</div></div>
+  <div class="mgr-badge" onclick="openMgrModal()" title="Click to edit session">
+    <span style="font-size:16px">👤</span>
+    <div><div class="mgr-name" id="mgr-disp">Set Manager</div><div class="mgr-sub" id="mgr-date-disp">Click to set up session</div></div>
+  </div>
+  <div class="hdr-stats">
+    <div class="hs"><div class="hs-v" id="h-players">0</div><div class="hs-l">Players</div></div>
+    <div class="hs"><div class="hs-v" id="h-queue">0</div><div class="hs-l">In Queue</div></div>
+    <div class="hs"><div class="hs-v" id="h-courts">0</div><div class="hs-l">Courts</div></div>
+    <div class="hs"><div class="hs-v" id="h-matches">0</div><div class="hs-l">Matches</div></div>
+  </div>
+</div>
+
+<!-- SYNC BAR -->
+<div class="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span class="sync-lbl" id="sync-lbl">Connecting to Supabase…</span>
+  <div class="sync-actions">
+    <button class="btn btn-o btn-xs" onclick="syncAll()" title="Force sync everything to database">↑ Sync Now</button>
+    <button class="btn btn-o btn-xs" onclick="loadFromDB()" title="Reload data from database">↓ Load DB</button>
+  </div>
+</div>
+
+<!-- COURT CTRL -->
+<div class="court-ctrl">
+  <div class="ctrl-lbl">Courts:</div>
+  <div class="cb-wrap">
+    <button class="cb" onclick="setCourtCount(1)">1</button>
+    <button class="cb" onclick="setCourtCount(2)">2</button>
+    <button class="cb active" onclick="setCourtCount(3)">3</button>
+    <button class="cb" onclick="setCourtCount(4)">4</button>
+  </div>
+  <div class="dv"></div>
+  <button class="btn btn-g btn-sm" onclick="autoMatchAll()">⚡ Auto-Match All</button>
+  <button class="btn btn-o btn-sm" onclick="clearAllCourts()">Clear Courts</button>
+</div>
+
+<!-- NAV (5 tabs) -->
+<div class="nav">
+  <div class="nt active" onclick="showView('courts')">Courts</div>
+  <div class="nt" onclick="showView('queue')">Queue</div>
+  <div class="nt" onclick="showView('players')">Players</div>
+  <div class="nt" onclick="showView('payment')">Payment</div>
+  <div class="nt" onclick="showView('leaderboard')">Leaderboard</div>
+</div>
+
+<div class="toast-bar"><span class="toast-msg" id="toast"></span></div>
+
+<div class="main">
+
+<!-- ══ COURTS ══ -->
+<div class="view active" id="view-courts"><div id="courts-wrap"></div></div>
+
+<!-- ══ QUEUE ══ -->
+<div class="view" id="view-queue">
+  <div class="two-col">
+    <div>
+      <div class="sh"><div class="st">Waiting Queue</div><span class="chip" id="q-count">0 waiting</span></div>
+      <div class="info-note">Players who <b>just finished</b> are shown with a "Just played" tag and deprioritised by the algorithm — giving everyone a fair turn.</div>
+      <div class="slist" id="queue-list"></div>
+    </div>
+    <div>
+      <!-- SMASH HUB SUGGESTIONS -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+        <div class="sug-title">🏸 Smash Hub Suggestions</div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <div id="sug-mode-toggle" class="mode-toggle">
+            <button class="mt-pill sel-d" data-mode="doubles" onclick="setSugMode('doubles')">Doubles</button>
+            <button class="mt-pill"       data-mode="singles" onclick="setSugMode('singles')">Singles</button>
+            <button class="mt-pill"       data-mode="mixed"   onclick="setSugMode('mixed')">Mixed</button>
+          </div>
+          <button class="btn btn-o btn-xs" onclick="refreshSuggestions()" title="Refresh">↻</button>
+        </div>
+      </div>
+      <div id="suggestions-wrap"></div>
+      <div class="gdiv"></div>
+      <!-- MANUAL BUILDER -->
+      <div class="sh"><div class="st">Manual Match Builder</div></div>
+      <div class="builder">
+        <div style="font-size:11px;color:var(--gr4);margin-bottom:8px">Click players from the queue list to assign them. Team A fills first, then Team B.</div>
+        <div class="builder-teams">
+          <div class="team-slot"><div class="team-slot-lbl lbl-a">Team A</div><div id="slot-a"></div></div>
+          <div class="team-slot"><div class="team-slot-lbl lbl-b">Team B</div><div id="slot-b"></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--gr4)">Mode:</span>
+          <div id="builder-mode-toggle" class="mode-toggle">
+            <button class="mt-pill sel-d" data-mode="doubles" onclick="setBuilderMode('doubles')">Doubles</button>
+            <button class="mt-pill"       data-mode="singles" onclick="setBuilderMode('singles')">Singles</button>
+            <button class="mt-pill"       data-mode="mixed"   onclick="setBuilderMode('mixed')">Mixed</button>
+          </div>
+        </div>
+        <div class="court-assign-row"><span class="court-assign-lbl">Court:</span><div id="builder-court-pills"></div></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" id="builder-start-btn" onclick="startManualMatch()" disabled>▶ Start Match</button>
+          <button class="btn btn-red btn-xs" onclick="clearBuilder()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PLAYERS ══ -->
+<div class="view" id="view-players">
+  <div class="two-col">
+    <div>
+      <div class="sh"><div class="st">Add Player</div></div>
+      <div style="background:var(--b2);border:1px solid var(--gd);border-radius:8px;padding:14px;margin-bottom:14px">
+        <div class="form-row">
+          <div class="fg"><label>Full Name</label><input class="fc" id="p-name" placeholder="Player name"/></div>
+          <div class="fg"><label>Gender</label>
+            <select class="fc" id="p-gender"><option value="M">Male</option><option value="F">Female</option></select>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Skill Level — <span id="skill-lbl" style="color:var(--g)">3 · Intermediate</span></label>
+          <input type="range" min="1" max="5" value="3" step="1" class="skill-slider" id="p-skill" oninput="updSkill(this.value)"/>
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--gr4);margin-top:2px">
+            <span>Beginner</span><span>Recreational</span><span>Intermediate</span><span>Advanced</span><span>Elite</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>Preferred Mode</label>
+            <select class="fc" id="p-mode">
+              <option value="any">Any</option><option value="singles">Singles</option>
+              <option value="doubles">Doubles</option><option value="mixed">Mixed Doubles</option>
+            </select>
+          </div>
+          <div class="fg" style="justify-content:flex-end">
+            <button class="btn btn-g" style="width:100%;margin-top:auto" onclick="addPlayer()">+ Add to Session</button>
+          </div>
+        </div>
+      </div>
+      <div class="sh"><div class="st">All Players</div><span class="chip" id="pl-total">0</span></div>
+      <div class="slist" id="all-players"></div>
+    </div>
+    <div>
+      <div class="sh"><div class="st">Match Log</div></div>
+      <div class="slist" id="match-log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAYMENT ══ -->
+<div class="view" id="view-payment">
+  <div style="background:var(--b2);border:1px solid var(--gd);border-radius:8px;padding:14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--g);letter-spacing:0.08em">💰 Payment Tracker</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">
+        <span style="font-size:10px;color:var(--gr4)">Fee per player:</span>
+        <input class="pay-fee-inp" id="session-fee" type="number" value="50" min="0" oninput="renderPayment()"/>
+        <span style="font-size:10px;color:var(--gr4)">Bank details:</span>
+        <input class="fc" id="bank-acct" placeholder="Bank / Acct No." style="width:170px;padding:4px 8px;font-size:11px" oninput="renderPayment()"/>
+      </div>
+    </div>
+    <div class="pay-summ" id="pay-summ"></div>
+  </div>
+  <div id="payment-list"></div>
+</div>
+
+<!-- ══ LEADERBOARD ══ -->
+<div class="view" id="view-leaderboard">
+  <div class="stat-grid" id="global-stats"></div>
+  <div class="gdiv"></div>
+  <div class="sh"><div class="st">Player Rankings</div></div>
+  <div id="lb-list"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SKILL_N=['','Beginner','Recreational','Intermediate','Advanced','Elite'];
+const SKILL_C=['','sk1','sk2','sk3','sk4','sk5'];
+const MODE_C={singles:'ms',doubles:'md',mixed:'mm',any:'md'};
+const MODE_LBL={singles:'Singles',doubles:'Doubles',mixed:'Mixed',any:'Any'};
+
+let S={
+  players:[],queue:[],courts:[],log:[],nextId:1,
+  sugMode:'doubles',
+  builder:{teamA:[],teamB:[],mode:'doubles',targetCourt:null},
+  manager:{name:'',date:'',venue:''},
+  pay:{}
+};
+
+/* ── Helpers ── */
+function pid(id){return S.players.find(p=>p.id===id)}
+function wr(p){return p.matches?Math.round(p.wins/p.matches*100):0}
+
+// FAIR score: penalises players who just played so they go to back of priority
+// Also uses skill + win-rate for balance scoring
+function fairScore(p){
+  const base=p.skill+(p.matches>0?p.wins/p.matches:0.5)*0.6;
+  const matchesAgo=(S.log.length)-(p.lastMatchAt||-99);
+  // Penalty: just played (0-1 matches ago) = -2.5, 2 ago = -0.8, 3+ = 0
+  const penalty=matchesAgo<=1?2.5:matchesAgo<=2?0.8:0;
+  return base-penalty;
+}
+
+// Balance score uses raw skill+WR without fairness penalty (so teams are still even)
+function balScore(p){
+  return p.skill*10+(wr(p)*0.4);
+}
+
+function fmtTime(s){return Math.floor(s/60)+':'+(s%60).toString().padStart(2,'0')}
+function avHtml(p,sz){
+  sz=sz||30;return `<div class="avatar ${p.gender==='F'?'av-f':'av-m'}" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*0.38)}px">${p.name[0].toUpperCase()}</div>`;
+}
+function pChip(p,flip){
+  const g=`<div class="pg ${p.gender==='F'?'pg-f':'pg-m'}">${p.gender}</div>`;
+  return `<div class="pchip">${flip?`<span class="pn">${p.name}</span>${g}`:`${g}<span class="pn">${p.name}</span>`}</div>`;
+}
+
+/* ── Manager ── */
+function openMgrModal(){
+  document.getElementById('mgr-name-inp').value=S.manager.name||'';
+  document.getElementById('mgr-date-inp').value=S.manager.date||new Date().toISOString().slice(0,10);
+  document.getElementById('mgr-venue-inp').value=S.manager.venue||'';
+  document.getElementById('mgr-modal').classList.add('open');
+}
+function saveManager(){
+  S.manager.name=document.getElementById('mgr-name-inp').value.trim()||'Manager';
+  S.manager.date=document.getElementById('mgr-date-inp').value;
+  S.manager.venue=document.getElementById('mgr-venue-inp').value.trim();
+  document.getElementById('mgr-disp').textContent=S.manager.name;
+  if(S.manager.date){
+    const d=new Date(S.manager.date+'T00:00:00');
+    const ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    document.getElementById('mgr-date-disp').textContent=(S.manager.venue?S.manager.venue+' · ':'')+ds;
+  }
+  document.getElementById('mgr-modal').classList.remove('open');
+  toast('Session saved ✓');
+}
+
+/* ── Courts ── */
+function initCourts(n){
+  const old=S.courts.slice(0,n);
+  S.courts=Array.from({length:n},(_,i)=>old[i]||{id:i+1,status:'idle',match:null,elapsed:0,timer:null,courtMode:'doubles'});
+}
+function setCourtCount(n){
+  document.querySelectorAll('.cb').forEach((b,i)=>b.classList.toggle('active',i===n-1));
+  S.courts.slice(n).filter(c=>c.status==='playing').forEach(c=>{
+    clearInterval(c.timer);
+    [...c.match.team1,...c.match.team2].forEach(p=>{p.onCourt=false;p.inQueue=true;S.queue.push(p.id)});
+  });
+  initCourts(n);render();
+}
+function setCourtMode(ci,mode){if(!S.courts[ci].status==='playing')return;S.courts[ci].courtMode=mode;renderCourts()}
+
+function startMatch(ci,sug){
+  const court=S.courts[ci];
+  if(!sug){
+    const s=genMatches(court.courtMode||'doubles');
+    if(!s.length){toast('Not enough available players for '+court.courtMode);return}
+    sug=s[0];
+  }
+  [...sug.team1,...sug.team2].forEach(p=>{p.inQueue=false;p.onCourt=true;S.queue=S.queue.filter(x=>x!==p.id)});
+  court.status='playing';
+  court.match={team1:sug.team1,team2:sug.team2,score1:0,score2:0,mode:sug.mode};
+  court.elapsed=0;
+  court.timer=setInterval(()=>{court.elapsed++;const el=document.getElementById('ct'+ci);if(el)el.textContent=fmtTime(court.elapsed)},1000);
+  render();
+}
+
+function endMatch(ci,winner){
+  const court=S.courts[ci];if(!court.match)return;
+  clearInterval(court.timer);
+  const m=court.match,matchIdx=S.log.length;
+  const winners=winner===1?m.team1:m.team2,losers=winner===1?m.team2:m.team1;
+  winners.forEach(p=>{p.wins++;p.matches++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
+  losers.forEach(p=>{p.losses++;p.matches++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
+  S.log.unshift({
+    time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    mode:m.mode,court:court.id,duration:fmtTime(court.elapsed),
+    t1:m.team1.map(p=>p.name).join(' & '),t2:m.team2.map(p=>p.name).join(' & '),
+    s1:m.score1,s2:m.score2,
+    winner:winner===1?m.team1.map(p=>p.name).join(' & '):m.team2.map(p=>p.name).join(' & ')
+  });
+  court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
+  toast('Match recorded — great game!');render();
+}
+
+function cancelMatch(ci){
+  const court=S.courts[ci];if(!court.match)return;
+  clearInterval(court.timer);
+  [...court.match.team1,...court.match.team2].forEach(p=>{p.onCourt=false;p.inQueue=true;S.queue.push(p.id)});
+  court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
+  toast('Match cancelled');render();
+}
+function autoMatchAll(){
+  const idle=S.courts.filter(c=>c.status==='idle');
+  if(!idle.length){toast('All courts are busy');return}
+  let cnt=0;
+  for(const c of idle){const s=genMatches(c.courtMode||'doubles');if(s.length){startMatch(S.courts.indexOf(c),s[0]);cnt++}}
+  if(!cnt)toast('Not enough available players');else toast('Matched '+cnt+' court'+(cnt>1?'s':'')+'!');
+}
+function clearAllCourts(){S.courts.forEach((_,i)=>{if(S.courts[i].status==='playing')cancelMatch(i)})}
+
+/* ── Matchmaking (FAIR + gender-balanced + excludes on-court players) ── */
+function availablePlayers(){
+  return S.queue.map(id=>pid(id)).filter(p=>p&&!p.onCourt);
+}
+
+// Gender balance score for a team: ideal is 1M+1F for doubles, 1M+1F for mixed
+// Returns penalty (0 = perfect, higher = worse gender imbalance)
+function genderPenalty(team1, team2){
+  // Count genders across both teams
+  const allF=[...team1,...team2].filter(p=>p.gender==='F').length;
+  const allM=[...team1,...team2].filter(p=>p.gender==='M').length;
+  const total=team1.length+team2.length;
+  if(total<=2) return 0; // singles — no gender pairing concern
+
+  // Within each team: penalise 0F vs 2F (all-male or all-female team in doubles)
+  // Ideal for doubles: each team has 1M+1F or both teams same-gender composition
+  const t1F=team1.filter(p=>p.gender==='F').length;
+  const t2F=team2.filter(p=>p.gender==='F').length;
+  const t1M=team1.length-t1F, t2M=team2.length-t2F;
+
+  let penalty=0;
+  // Heavy penalty for 1 female facing 2 males (or 1 male facing 2 females)
+  // i.e. one team has 2F and other has 0F — the lone female is on opposite side of 2 males
+  if(allF===1){
+    // Only 1 female in the whole match — she shouldn't be the sole female vs 3 males
+    // Prefer her to be paired with at least 1 male on her team (reduces isolation)
+    // This is unavoidable if only 1F available, so just flag it, don't eliminate
+    penalty+=1; // small penalty — still valid if no better option
+  }
+  if(allF>=1&&allM>=1){
+    // Try to distribute genders evenly between teams
+    const imbalance=Math.abs(t1F-t2F); // 0=even, 1=one team has all females
+    penalty+=imbalance*2;
+  }
+  // Worst case: all 4 are same gender — no penalty since it's balanced between teams
+  return penalty;
+}
+
+function genMatches(mode){
+  const pool=availablePlayers();
+  const needed=mode==='singles'?2:4;
+  if(pool.length<needed)return[];
+
+  const sorted=[...pool].sort((a,b)=>fairScore(b)-fairScore(a));
+  const results=[],used=new Set();
+
+  if(mode==='singles'){
+    for(let i=0;i<sorted.length-1&&results.length<3;i++){
+      if(used.has(sorted[i].id))continue;
+      const p1=sorted[i];let best=null,bestDiff=Infinity;
+      for(let j=i+1;j<sorted.length;j++){
+        if(used.has(sorted[j].id))continue;
+        const d=Math.abs(balScore(p1)-balScore(sorted[j]));
+        if(d<bestDiff){bestDiff=d;best=sorted[j]}
+      }
+      if(best){
+        const bal=Math.round(100-Math.min(bestDiff/60*55,50));
+        results.push({team1:[p1],team2:[best],balance:Math.max(bal,50),mode:'singles'});
+        used.add(p1.id);used.add(best.id);
+      }
+    }
+    return results;
+  }
+
+  // Doubles / Mixed — gender-balanced + skill-balanced search
+  for(let i=0;i<sorted.length&&results.length<3;i++){
+    if(used.has(sorted[i].id))continue;
+    const p1=sorted[i];
+    // best stores {balance, genderPen, team1, team2}
+    let best={score:-Infinity,team1:null,team2:null,balance:0};
+    outer:for(let j=i+1;j<sorted.length;j++){
+      if(used.has(sorted[j].id))continue;
+      for(let k=j+1;k<sorted.length;k++){
+        if(used.has(sorted[k].id))continue;
+        for(let l=k+1;l<sorted.length;l++){
+          if(used.has(sorted[l].id))continue;
+          const[p2,p3,p4]=[sorted[j],sorted[k],sorted[l]];
+          const pairs=[{t1:[p1,p2],t2:[p3,p4]},{t1:[p1,p3],t2:[p2,p4]},{t1:[p1,p4],t2:[p2,p3]}];
+          for(const pair of pairs){
+            if(mode==='mixed'){
+              // Mixed requires M+F on each team — strict rule
+              if(!(pair.t1.some(x=>x.gender==='M')&&pair.t1.some(x=>x.gender==='F')))continue;
+              if(!(pair.t2.some(x=>x.gender==='M')&&pair.t2.some(x=>x.gender==='F')))continue;
+            }
+            // Skill balance (0-100)
+            const bs1=(balScore(pair.t1[0])+balScore(pair.t1[1]))/2;
+            const bs2=(balScore(pair.t2[0])+balScore(pair.t2[1]))/2;
+            const skillDiff=Math.abs(bs1-bs2);
+            const skillBal=Math.round(100-Math.min(skillDiff/50*50,48));
+            // Gender penalty (lower = better gender distribution)
+            const gPen=genderPenalty(pair.t1,pair.t2);
+            // Combined score: skill balance matters most, gender is a tiebreaker
+            const combinedScore=skillBal-(gPen*8);
+            if(combinedScore>best.score){
+              best={score:combinedScore,team1:pair.t1,team2:pair.t2,balance:skillBal,gPen};
+            }
+          }
+          if(best.score>-Infinity){
+            results.push({team1:best.team1,team2:best.team2,balance:best.balance,mode,genderWarning:best.gPen>0});
+            [p1,sorted[j],sorted[k],sorted[l]].forEach(p=>used.add(p.id));
+            break outer;
+          }
+        }
+      }
+    }
+  }
+  return results;
+}
+
+/* ── Suggestion mode ── */
+function setSugMode(mode){
+  S.sugMode=mode;
+  document.querySelectorAll('#sug-mode-toggle .mt-pill').forEach(b=>{b.className='mt-pill'+(b.dataset.mode===mode?' sel-'+mode[0]:'')});
+  renderSuggestions();
+}
+function refreshSuggestions(){renderSuggestions();toast('Suggestions refreshed ↻')}
+
+function renderSuggestions(){
+  const sw=document.getElementById('suggestions-wrap');if(!sw)return;
+  const onCourt=S.players.filter(p=>p.onCourt).length;
+  const sugs=genMatches(S.sugMode);
+  let html='';
+  if(onCourt>0) html+=`<div class="info-note">⚠ <b>${onCourt} player${onCourt>1?'s are':' is'}</b> currently on court and excluded from suggestions.</div>`;
+  if(!sugs.length){html+=`<div class="empty-state">No ${S.sugMode} matches possible.<br>Try a different mode or add more players.</div>`;sw.innerHTML=html;updateBuilderUI();return}
+  html+=sugs.map((s,idx)=>`
+    <div class="sug-box">
+      <div class="sug-lbl">
+        <span>Option ${idx+1}</span>
+        <span class="mode-tag ${MODE_C[s.mode]||'md'}">${s.mode}</span>
+        ${s.genderWarning?`<span style="font-size:9px;color:#E8A04C;border:1px solid #E8A04C55;border-radius:2px;padding:1px 5px">⚠ Gender imbalance</span>`:''}
+        <span style="margin-left:auto;color:var(--g);font-weight:700">${s.balance}% balanced</span>
+      </div>
+      <div class="match-grid">
+        <div class="tc ta" style="font-size:11px">${s.team1.map(p=>`<div style="font-weight:600;text-align:right">${p.name}</div>`).join('')}</div>
+        <div class="vs" style="font-size:13px">VS</div>
+        <div class="tc tb" style="font-size:11px">${s.team2.map(p=>`<div style="font-weight:600">${p.name}</div>`).join('')}</div>
+      </div>
+      <div class="bal-bar"><div class="bal-fill" style="width:${s.balance}%"></div></div>
+      <div class="bal-pct">${s.balance}% balance</div>
+      <div class="court-assign-row">
+        <span class="court-assign-lbl">▶ Start on:</span>
+        ${S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" onclick="${c.status==='idle'?`startSugMatch(${ci},${idx},'${S.sugMode}')`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  sw.innerHTML=html;updateBuilderUI();
+}
+
+function startSugMatch(ci,idx,mode){
+  const sugs=genMatches(mode);
+  if(!sugs[idx]){toast('Suggestion expired — please refresh');renderSuggestions();return}
+  startMatch(ci,sugs[idx]);          // auto-starts the match immediately
+  showView('courts');                 // jump to Courts tab so you see the timer live
+  toast('Match started on Court '+(ci+1)+' ▶');
+}
+
+/* ── Manual builder ── */
+function setBuilderMode(mode){
+  S.builder.mode=mode;
+  document.querySelectorAll('#builder-mode-toggle .mt-pill').forEach(b=>{b.className='mt-pill'+(b.dataset.mode===mode?' sel-'+mode[0]:'')});
+  updateBuilderUI();
+}
+function addToBuilder(pid_){
+  const p=pid(pid_);if(!p||p.onCourt)return;
+  const b=S.builder;
+  if(b.teamA.some(x=>x.id===pid_)){b.teamA=b.teamA.filter(x=>x.id!==pid_);updateBuilderUI();renderQueueList();return}
+  if(b.teamB.some(x=>x.id===pid_)){b.teamB=b.teamB.filter(x=>x.id!==pid_);updateBuilderUI();renderQueueList();return}
+  const max=b.mode==='singles'?1:2;
+  if(b.teamA.length<max)b.teamA.push(p);
+  else if(b.teamB.length<max)b.teamB.push(p);
+  else{toast('Teams are full — remove a player first');return}
+  updateBuilderUI();renderQueueList();
+}
+function removeFromBuilder(team,pid_){
+  if(team==='A')S.builder.teamA=S.builder.teamA.filter(x=>x.id!==pid_);
+  else S.builder.teamB=S.builder.teamB.filter(x=>x.id!==pid_);
+  updateBuilderUI();renderQueueList();
+}
+function setBuilderCourt(ci){
+  S.builder.targetCourt=S.builder.targetCourt===ci?null:ci;
+  updateBuilderUI();
+}
+function clearBuilder(){
+  S.builder={...S.builder,teamA:[],teamB:[],targetCourt:null};
+  updateBuilderUI();renderQueueList();
+}
+function startManualMatch(){
+  const b=S.builder,needed=b.mode==='singles'?1:2;
+  if(b.teamA.length!==needed||b.teamB.length!==needed){toast('Fill both teams first');return}
+  if(b.targetCourt===null){toast('Select a court first');return}
+  if(S.courts[b.targetCourt].status==='playing'){toast('That court is busy');return}
+  startMatch(b.targetCourt,{team1:b.teamA,team2:b.teamB,mode:b.mode,balance:100});
+  clearBuilder();
+  showView('courts'); // auto-navigate so you see the live timer
+  toast('Match started on Court '+(b.targetCourt+1)+' ▶');
+}
+function updateBuilderUI(){
+  const b=S.builder,needed=b.mode==='singles'?1:2;
+  const sa=document.getElementById('slot-a'),sb=document.getElementById('slot-b');
+  if(sa)sa.innerHTML=b.teamA.length?b.teamA.map(p=>`<div class="slot-player">${avHtml(p,18)}<span style="font-size:11px">${p.name}</span><button class="slot-remove" onclick="removeFromBuilder('A',${p.id})">✕</button></div>`).join(''):`<div class="slot-empty">Click players to add</div>`;
+  if(sb)sb.innerHTML=b.teamB.length?b.teamB.map(p=>`<div class="slot-player">${avHtml(p,18)}<span style="font-size:11px">${p.name}</span><button class="slot-remove" onclick="removeFromBuilder('B',${p.id})">✕</button></div>`).join(''):`<div class="slot-empty">Click players to add</div>`;
+  const cp=document.getElementById('builder-court-pills');
+  if(cp)cp.innerHTML=S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" style="${b.targetCourt===ci?'border-color:var(--g);color:var(--g);background:var(--gg)':''}" onclick="${c.status==='idle'?`setBuilderCourt(${ci})`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('');
+  const sb2=document.getElementById('builder-start-btn');
+  if(sb2)sb2.disabled=!(b.teamA.length===needed&&b.teamB.length===needed&&b.targetCourt!==null&&S.courts[b.targetCourt]?.status==='idle');
+}
+
+/* ── Players ── */
+function updSkill(v){document.getElementById('skill-lbl').textContent=v+' · '+SKILL_N[v]}
+function addPlayer(){
+  const name=document.getElementById('p-name').value.trim();
+  if(!name){toast('Enter a player name');return}
+  const p={id:S.nextId++,name,gender:document.getElementById('p-gender').value,skill:parseInt(document.getElementById('p-skill').value),
+    mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,inQueue:true,onCourt:false,lastMatchAt:-99};
+  S.players.push(p);S.queue.push(p.id);S.pay[p.id]={status:'unpaid',note:''};
+  document.getElementById('p-name').value='';
+  toast(p.name+' added to session');render();
+}
+function toggleQueue(pid_){
+  const p=pid(pid_);if(!p||p.onCourt)return;
+  if(p.inQueue){p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);toast(p.name+' left queue')}
+  else{p.inQueue=true;S.queue.push(pid_);toast(p.name+' joined queue')}
+  render();
+}
+function removePlayer(pid_){
+  const p=pid(pid_);if(!p||p.onCourt)return;
+  S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);delete S.pay[pid_];
+  toast(p.name+' removed');render();
+}
+
+/* ── Payment ── */
+function setPayStatus(pid_,status){
+  if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};
+  S.pay[pid_].status=status;renderPayment();
+}
+function setPayNote(pid_,note){if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};S.pay[pid_].note=note}
+
+function renderPayment(){
+  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
+  const bank=document.getElementById('bank-acct')?.value||'';
+  const pl=document.getElementById('payment-list'),ps=document.getElementById('pay-summ');
+  if(!pl)return;
+  let cash=0,bk=0,unp=0;
+  S.players.forEach(p=>{const s=(S.pay[p.id]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
+  if(ps)ps.innerHTML=`
+    <div><div class="psv" style="color:#3DB354">${cash+bk}</div><div class="psl">Collected</div></div>
+    <div><div class="psv" style="color:#FF8888">${unp}</div><div class="psl">Pending</div></div>
+    <div><div class="psv">${(cash+bk+unp)}</div><div class="psl">Total</div></div>
+    <div><div class="psv">${S.players.length}</div><div class="psl">Players</div></div>`;
+  if(!S.players.length){pl.innerHTML='<div class="empty-state">No players in session yet.</div>';return}
+  pl.innerHTML=(bank?`<div class="info-note" style="margin-bottom:10px">Bank transfer to: <b>${bank}</b></div>`:'')+
+    S.players.map(p=>{
+      if(!S.pay[p.id])S.pay[p.id]={status:'unpaid',note:''};
+      const pay=S.pay[p.id];
+      return `<div class="pay-row">
+        ${avHtml(p,28)}
+        <div class="pay-info">
+          <div style="font-weight:600;font-size:13px">${p.name}</div>
+          <div style="font-size:10px;color:var(--gr4)">${p.gender==='F'?'Female':'Male'} · ${SKILL_N[p.skill]}</div>
+        </div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--g);flex-shrink:0">${fee}</div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="pay-btn ${pay.status==='cash'?'p-cash':''}" onclick="setPayStatus(${p.id},'cash')">💵 Cash</button>
+          <button class="pay-btn ${pay.status==='bank'?'p-bank':''}" onclick="setPayStatus(${p.id},'bank')">🏦 Bank</button>
+          <button class="pay-btn ${pay.status==='unpaid'?'p-unpaid':''}" onclick="setPayStatus(${p.id},'unpaid')">✕</button>
+        </div>
+        <input class="pay-note" placeholder="Note..." value="${pay.note||''}" oninput="setPayNote(${p.id},this.value)"/>
+      </div>`;
+    }).join('');
+}
+
+/* ── Renders ── */
+function renderCourts(){
+  const el=document.getElementById('courts-wrap');if(!el)return;
+  el.innerHTML=S.courts.map((court,i)=>{
+    const cm=court.courtMode||'doubles';
+    const modePills=`<div class="mode-toggle">${[['singles','Singles'],['doubles','Doubles'],['mixed','Mixed']].map(([m,l])=>`<button class="mt-pill${cm===m?' sel-'+m[0]:''}" onclick="if(S.courts[${i}].status!=='playing'){S.courts[${i}].courtMode='${m}';renderCourts()}">${l}</button>`).join('')}</div>`;
+    if(court.status==='playing'&&court.match){
+      const m=court.match;
+      return `<div class="court-card playing">
+        <div class="court-hdr">
+          <div class="court-num">Court ${court.id}</div>
+          <div class="mode-tag ${MODE_C[m.mode]||'md'}">${MODE_LBL[m.mode]}</div>
+          <div style="margin-left:auto;text-align:right"><div id="ct${i}" class="timer-big">${fmtTime(court.elapsed)}</div><div class="timer-lbl">Duration</div></div>
+          <div class="status-dot dot-on" style="margin-left:8px;align-self:flex-start;margin-top:6px"></div>
+        </div>
+        <div class="match-grid">
+          <div class="tc ta"><div class="tlbl">Team A</div>${m.team1.map(p=>pChip(p,true)).join('')}</div>
+          <div class="vs">VS</div>
+          <div class="tc tb"><div class="tlbl">Team B</div>${m.team2.map(p=>pChip(p,false)).join('')}</div>
+        </div>
+        <div class="score-row">
+          <input class="score-inp" type="number" value="${m.score1}" min="0" onchange="S.courts[${i}].match.score1=parseInt(this.value)||0"/>
+          <span class="score-sep">:</span>
+          <input class="score-inp" type="number" value="${m.score2}" min="0" onchange="S.courts[${i}].match.score2=parseInt(this.value)||0"/>
+        </div>
+        <div class="court-actions">
+          <button class="btn btn-green btn-sm" onclick="endMatch(${i},1)">Team A Wins</button>
+          <button class="btn btn-green btn-sm" onclick="endMatch(${i},2)">Team B Wins</button>
+          <button class="btn btn-red btn-sm" onclick="cancelMatch(${i})">Cancel</button>
+        </div>
+      </div>`;
+    }
+    const sug=genMatches(cm)[0];
+    return `<div class="court-card">
+      <div class="court-hdr">
+        <div class="court-num">Court ${court.id}</div>${modePills}
+        <div style="margin-left:auto;display:flex;align-items:center;gap:5px"><span style="font-size:10px;color:var(--gr4)">Idle</span><div class="status-dot dot-idle"></div></div>
+      </div>
+      ${sug?`<div class="sug-box">
+        <div class="sug-lbl"><span>Best ${cm} match</span><span style="margin-left:auto;color:var(--g);font-weight:700">${sug.balance}% balanced</span></div>
+        <div class="match-grid">
+          <div class="tc ta">${sug.team1.map(p=>pChip(p,true)).join('')}</div>
+          <div class="vs" style="font-size:15px">VS</div>
+          <div class="tc tb">${sug.team2.map(p=>pChip(p,false)).join('')}</div>
+        </div>
+        <div class="bal-bar"><div class="bal-fill" style="width:${sug.balance}%"></div></div>
+      </div>
+      <div class="court-actions"><button class="btn btn-g btn-sm" onclick="startMatch(${i})">▶ Start Match</button></div>`
+      :`<div class="court-empty">Need more queued players for a ${cm} match</div>`}
+    </div>`;
+  }).join('');
+}
+
+function renderQueueList(){
+  const ql=document.getElementById('queue-list');if(!ql)return;
+  // Only show players in queue and NOT on court
+  const qp=S.queue.map(id=>pid(id)).filter(p=>p&&!p.onCourt);
+  const qcount=document.getElementById('q-count');
+  if(qcount)qcount.textContent=qp.length+' waiting';
+  // Sort by fairness score in the display too
+  const sorted=[...qp].sort((a,b)=>fairScore(b)-fairScore(a));
+  const b=S.builder;
+  ql.innerHTML=sorted.length?sorted.map((p,i)=>{
+    const inA=b.teamA.some(x=>x.id===p.id),inB=b.teamB.some(x=>x.id===p.id);
+    const recentBadge=S.log.length>0&&(S.log.length-(p.lastMatchAt||-99))<=1
+      ?`<span style="font-size:9px;color:var(--gr4);border:1px solid var(--gr2);border-radius:2px;padding:1px 4px">Just played</span>`:'';
+    const tBadge=inA?`<span style="font-size:9px;font-weight:700;color:var(--male);border:1px solid var(--male);border-radius:2px;padding:1px 4px">TEAM A</span>`
+      :inB?`<span style="font-size:9px;font-weight:700;color:#E8A04C;border:1px solid #E8A04C;border-radius:2px;padding:1px 4px">TEAM B</span>`:'';
+    return `<div class="pl-item ${inA?'sel-a':inB?'sel-b':''}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
+      <div class="q-pos">${i+1}</div>${avHtml(p)}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${tBadge}${recentBadge}</div>
+        <div class="pl-meta">${p.gender==='F'?'Female':'Male'} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR</div>
+      </div>
+      <div class="sk ${SKILL_C[p.skill]}">${SKILL_N[p.skill]}</div>
+      <button class="btn btn-red btn-xs" onclick="event.stopPropagation();toggleQueue(${p.id})" style="margin-left:5px">Remove</button>
+    </div>`;
+  }).join('')
+  :`<div class="empty-state">Queue is empty.<br>Add players in the Players tab.</div>`;
+}
+
+function render(){
+  const qAvail=S.players.filter(p=>p.inQueue&&!p.onCourt).length;
+  document.getElementById('h-players').textContent=S.players.length;
+  document.getElementById('h-queue').textContent=qAvail;
+  document.getElementById('h-courts').textContent=S.courts.length;
+  document.getElementById('h-matches').textContent=S.log.length;
+  renderCourts();renderQueueList();renderSuggestions();updateBuilderUI();
+
+  // All players
+  const ap=document.getElementById('all-players');
+  if(ap){
+    document.getElementById('pl-total').textContent=S.players.length;
+    ap.innerHTML=S.players.length?S.players.map(p=>`
+      <div class="pl-item">
+        ${avHtml(p)}
+        <div style="flex:1;min-width:0"><div class="pl-name">${p.name}</div>
+          <div class="pl-meta">${p.gender==='F'?'Female':'Male'} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR · ${MODE_LBL[p.mode]||p.mode}</div>
+        </div>
+        <div class="sk ${SKILL_C[p.skill]}">${SKILL_N[p.skill]}</div>
+        <button class="btn btn-sm ${p.onCourt?'btn-blue':p.inQueue?'btn-red':'btn-o'}" onclick="${p.onCourt?'':('toggleQueue('+p.id+')')}" ${p.onCourt?'disabled':''} style="min-width:58px;margin-left:5px">${p.onCourt?'On Court':p.inQueue?'Dequeue':'+ Queue'}</button>
+        <button class="btn btn-red btn-xs" onclick="removePlayer(${p.id})" ${p.onCourt?'disabled':''} style="margin-left:4px">✕</button>
+      </div>`).join(''):`<div class="empty-state">No players yet — add some above!</div>`;
+  }
+
+  // Match log
+  const ml=document.getElementById('match-log');
+  if(ml)ml.innerHTML=S.log.length?S.log.map(e=>`
+    <div class="log-e">
+      <div class="log-t">${e.time} · Court ${e.court} · <span class="mode-tag ${MODE_C[e.mode]||'md'}" style="font-size:9px;padding:1px 4px">${e.mode}</span> · ⏱ ${e.duration}</div>
+      <div class="log-m">${e.t1} vs ${e.t2}</div>
+      <div class="log-s">${e.s1} : ${e.s2} · ${e.winner} wins</div>
+    </div>`).join(''):`<div class="empty-state">No matches recorded yet</div>`;
+
+  // Payment
+  renderPayment();
+
+  // Leaderboard
+  const lb=document.getElementById('lb-list');
+  if(lb){
+    const ranked=[...S.players].filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a)||b.wins-a.wins);
+    lb.innerHTML=ranked.length?ranked.map((p,i)=>`
+      <div class="lb-row">
+        <div class="lb-rank ${['r1','r2','r3'][i]||'rn'}">${i+1}</div>${avHtml(p,26)}
+        <div class="lb-name">${p.name}<br><span style="font-size:9px;color:var(--gr4)">${SKILL_N[p.skill]}</span></div>
+        <div class="lb-stat">${p.matches}G</div><div class="lb-stat">${p.wins}W/${p.losses}L</div>
+        <div class="lb-wr">${wr(p)}%</div>
+      </div>`).join(''):`<div class="empty-state">Play some matches to see rankings</div>`;
+  }
+
+  // Global stats
+  const gs=document.getElementById('global-stats');
+  if(gs){
+    const topP=S.players.filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a))[0];
+    gs.innerHTML=`
+      <div class="stat-c"><div class="stat-v">${S.log.length}</div><div class="stat-l">Matches</div></div>
+      <div class="stat-c"><div class="stat-v">${S.players.length}</div><div class="stat-l">Players</div></div>
+      <div class="stat-c"><div class="stat-v">${S.players.filter(p=>p.onCourt).length}</div><div class="stat-l">On Court</div></div>
+      <div class="stat-c"><div class="stat-v" style="font-size:15px">${topP?topP.name.split(' ')[0]:'—'}</div><div class="stat-l">Top Player</div></div>`;
+  }
+}
+
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nt').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.nt').forEach(el=>{if(el.textContent.toLowerCase()===v)el.classList.add('active')});
+  if(v==='payment')renderPayment();else render();
+}
+
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+/* ════════════════════════════════════════
+   SUPABASE INTEGRATION
+   ════════════════════════════════════════ */
+const SB_URL  = 'https://qkimdpmrpoulmatevhcw.supabase.co';
+const SB_KEY  = 'sb_publishable_yVhH4U0zyfu_wgQn7-Fr8g_ercIEu22';
+const SB_HDR  = {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=representation'};
+
+let currentSessionId = null; // UUID of the active session row in Supabase
+
+function syncStatus(state, msg){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-lbl');
+  if(!dot||!lbl) return;
+  dot.className='sync-dot '+(state==='ok'?'ok':state==='err'?'err':'busy');
+  lbl.textContent=msg;
+}
+
+async function sbFetch(path, method='GET', body=null){
+  const opts={method, headers:SB_HDR};
+  if(body) opts.body=JSON.stringify(body);
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/'+path, opts);
+    if(!r.ok){
+      const err=await r.text();
+      console.error('Supabase error:', r.status, err);
+      return null;
+    }
+    const text=await r.text();
+    return text?JSON.parse(text):null;
+  }catch(e){
+    console.error('Supabase fetch failed:',e);
+    return null;
+  }
+}
+
+/* ── Session ── */
+async function ensureSession(){
+  if(currentSessionId) return currentSessionId;
+  syncStatus('busy','Creating session…');
+  const mgr=S.manager;
+  const row={
+    manager_name: mgr.name||'Admin',
+    session_date: mgr.date||new Date().toISOString().slice(0,10),
+    venue: mgr.venue||''
+  };
+  const res=await sbFetch('sessions','POST',row);
+  if(res&&res[0]){
+    currentSessionId=res[0].id;
+    syncStatus('ok','Session active · '+currentSessionId.slice(0,8));
+    return currentSessionId;
+  }
+  syncStatus('err','Could not create session');
+  return null;
+}
+
+/* ── Players ── */
+async function dbSavePlayer(p){
+  syncStatus('busy','Saving player…');
+  const row={name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,wins:p.wins,losses:p.losses,matches:p.matches};
+  let res;
+  if(p.dbId){
+    res=await sbFetch(`players?id=eq.${p.dbId}`,'PATCH',row);
+  } else {
+    res=await sbFetch('players','POST',row);
+    if(res&&res[0]) p.dbId=res[0].id;
+  }
+  syncStatus(res?'ok':'err', res?'Player saved ✓':'Save failed');
+}
+
+async function dbUpdatePlayerStats(p){
+  if(!p.dbId) return;
+  await sbFetch(`players?id=eq.${p.dbId}`,'PATCH',{wins:p.wins,losses:p.losses,matches:p.matches});
+}
+
+async function dbDeletePlayer(p){
+  if(!p.dbId) return;
+  await sbFetch(`players?id=eq.${p.dbId}`,'DELETE');
+}
+
+/* ── Match log ── */
+async function dbSaveMatch(entry){
+  const sid=await ensureSession();
+  if(!sid) return;
+  syncStatus('busy','Saving match…');
+  const row={
+    session_id:sid,
+    court_number:entry.court,
+    mode:entry.mode,
+    team1:entry.t1,
+    team2:entry.t2,
+    score1:entry.s1,
+    score2:entry.s2,
+    winner:entry.winner,
+    duration:entry.duration
+  };
+  const res=await sbFetch('matches','POST',row);
+  if(res&&res[0]) entry.dbId=res[0].id;
+  syncStatus(res?'ok':'err', res?'Match saved ✓':'Match save failed');
+}
+
+/* ── Payment ── */
+async function dbSavePayment(playerId, fee){
+  const sid=await ensureSession();
+  if(!sid) return;
+  const p=pid(playerId);
+  if(!p) return;
+  const pay=S.pay[playerId]||{status:'unpaid',note:''};
+  const row={session_id:sid,player_name:p.name,amount:fee,status:pay.status,note:pay.note||''};
+  if(pay.dbId){
+    await sbFetch(`payments?id=eq.${pay.dbId}`,'PATCH',row);
+  } else {
+    const res=await sbFetch('payments','POST',row);
+    if(res&&res[0]) pay.dbId=res[0].id;
+  }
+}
+
+/* ── Load from DB ── */
+async function loadFromDB(){
+  syncStatus('busy','Loading from database…');
+  const players=await sbFetch('players?select=*&order=created_at.desc&limit=200');
+  if(!players){syncStatus('err','Failed to load players');return}
+  if(players.length>0){
+    // Merge: load all stored players into session, avoid duplicates by dbId
+    players.forEach(row=>{
+      const exists=S.players.find(p=>p.dbId===row.id);
+      if(!exists){
+        S.players.push({
+          id:S.nextId++,dbId:row.id,
+          name:row.name,gender:row.gender,skill:row.skill,mode:row.mode||'any',
+          wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,
+          inQueue:false,onCourt:false,lastMatchAt:-99
+        });
+      }
+    });
+    syncStatus('ok',`Loaded ${players.length} player${players.length>1?'s':''} from DB`);
+    render();
+    toast(`Loaded ${players.length} players from Supabase ↓`);
+  } else {
+    syncStatus('ok','Database is empty — start adding players');
+  }
+}
+
+/* ── Sync everything ── */
+async function syncAll(){
+  syncStatus('busy','Syncing all data…');
+  await ensureSession();
+  // Sync all players
+  for(const p of S.players){
+    await dbSavePlayer(p);
+  }
+  // Sync payments
+  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
+  for(const p of S.players){
+    await dbSavePayment(p.id, fee);
+  }
+  syncStatus('ok',`Synced ${S.players.length} players · ${S.log.length} matches`);
+  toast('All data synced to Supabase ✓');
+}
+
+/* ── Wrap original functions to auto-save ── */
+const _origAddPlayer=addPlayer;
+async function addPlayer(){
+  _origAddPlayer();
+  // After adding, save to DB (last player added)
+  const p=S.players[S.players.length-1];
+  if(p) await dbSavePlayer(p);
+}
+
+const _origEndMatch=endMatch;
+async function endMatch(ci,winner){
+  _origEndMatch(ci,winner);
+  // Save match + update player stats
+  const entry=S.log[0]; // most recent
+  await dbSaveMatch(entry);
+  // Update stats for all players in that match
+  const allInMatch=[...S.courts[ci]?.match?.team1||[],...S.courts[ci]?.match?.team2||[]];
+  // Since match ended, get involved players from the log entry
+  const names=[...entry.t1.split(' & '),...entry.t2.split(' & ')];
+  for(const p of S.players){
+    if(names.includes(p.name)) await dbUpdatePlayerStats(p);
+  }
+}
+
+const _origRemovePlayer=removePlayer;
+async function removePlayer(pid_){
+  const p=pid(pid_);
+  _origRemovePlayer(pid_);
+  if(p) await dbDeletePlayer(p);
+}
+
+const _origSaveManager=saveManager;
+async function saveManager(){
+  _origSaveManager();
+  currentSessionId=null; // reset so a new session row is created with updated info
+  await ensureSession();
+}
+
+const _origSetPayStatus=setPayStatus;
+async function setPayStatus(pid_,status){
+  _origSetPayStatus(pid_,status);
+  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
+  await dbSavePayment(pid_,fee);
+}
+
+// Auto-connect on load
+async function initSupabase(){
+  syncStatus('busy','Connecting…');
+  // Ping players table
+  const test=await sbFetch('players?select=id&limit=1');
+  if(test!==null){
+    syncStatus('ok','Connected to Supabase ✓');
+    toast('Supabase connected ✓');
+  } else {
+    syncStatus('err','Cannot reach Supabase — check key/tables');
+    toast('⚠ Supabase connection failed — check console');
+  }
+}
+
+// Init
+document.getElementById('mgr-date-inp').value=new Date().toISOString().slice(0,10);
+initCourts(3);render();
+initSupabase();
+</script>
+</body>
+</html>
