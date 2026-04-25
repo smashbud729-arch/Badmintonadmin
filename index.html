@@ -29,11 +29,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .logo-sub{font-size:9px;color:var(--gr4);letter-spacing:0.2em;text-transform:uppercase;margin-top:-2px}
 .mgr-badge{display:flex;align-items:center;gap:7px;background:var(--b3);border:1.5px solid var(--pkl);border-radius:5px;padding:5px 11px;cursor:pointer;transition:border-color 0.2s}
 .mgr-badge:hover{border-color:var(--pk)}
-.mgr-name{font-size:12px;font-weight:600;color:var(--g)}
+.mgr-name{font-size:12px;font-weight:600;color:var(--pk)}
 .mgr-sub{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
 .hdr-stats{margin-left:auto;display:flex;gap:16px}
 .hs{text-align:center}
-.hs-v{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--g)}
+.hs-v{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--pk)}
 .hs-l{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
 
 /* Modal */
@@ -48,18 +48,18 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .cb-wrap{display:flex;gap:5px}
 .cb{width:28px;height:28px;border-radius:4px;border:1px solid var(--gr2);background:var(--b4);color:var(--gr4);cursor:pointer;font-weight:700;font-size:12px;transition:all 0.15s;font-family:'DM Sans',sans-serif}
 .cb.active{background:var(--pk);border-color:var(--pk);color:#fff}
-.cb:hover:not(.active){border-color:var(--g);color:var(--g)}
+.cb:hover:not(.active){border-color:var(--pk);color:var(--pk)}
 .dv{width:1px;height:20px;background:var(--gr)}
 
 /* Nav */
 .nav{display:flex;background:var(--b2);border-bottom:1px solid var(--gr);flex-shrink:0}
 .nt{flex:1;padding:9px 4px;text-align:center;cursor:pointer;font-size:10px;font-weight:600;color:var(--gr4);border-bottom:2px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.06em}
-.nt.active{color:var(--g);border-bottom-color:var(--pk)}
+.nt.active{color:var(--pk);border-bottom-color:var(--pk)}
 .nt:hover:not(.active){color:var(--w2);background:var(--b3)}
 
 /* Toast */
 .toast-bar{padding:4px 18px;height:26px;flex-shrink:0;display:flex;align-items:center}
-.toast-msg{font-size:11px;font-weight:600;color:var(--g);opacity:0;transition:opacity 0.3s}
+.toast-msg{font-size:11px;font-weight:600;color:var(--pk);opacity:0;transition:opacity 0.3s}
 .toast-msg.show{opacity:1}
 
 /* Main */
@@ -74,11 +74,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 /* Section hdr */
 .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
-.st{font-size:11px;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:0.1em}
+.st{font-size:11px;font-weight:700;color:var(--pk);text-transform:uppercase;letter-spacing:0.1em}
 
 /* Buttons */
 .btn{padding:6px 12px;border-radius:4px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;transition:all 0.15s}
-.btn-g{background:var(--pk);color:var(--b)}.btn-g:hover{background:var(--pkl)}
+.btn-g{background:var(--pk);color:#fff}.btn-g:hover{background:var(--pkl)}
 .btn-o{background:transparent;color:var(--pk);border:1.5px solid var(--pkl)}.btn-o:hover{background:var(--pkg)}
 .btn-sm{padding:5px 10px;font-size:11px}
 .btn-xs{padding:3px 8px;font-size:10px;font-weight:700}
@@ -112,7 +112,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .tlbl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px}
 .pchip{display:flex;align-items:center;gap:5px;padding:4px 8px;background:var(--b3);border-radius:4px;border:1px solid var(--gr)}
 .ta .pchip{justify-content:flex-end}
-.pn{font-size:12px;font-weight:600}
+.pn{font-size:12px;font-weight:600;color:var(--w)}
 .pg{width:14px;height:14px;border-radius:50%;flex-shrink:0;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .pg-m{background:#EEF3FF;color:var(--male)}.pg-f{background:var(--b4);color:var(--pkd)}
 .vs{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gr3);text-align:center}
@@ -136,7 +136,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .court-assign-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px}
 .court-assign-lbl{font-size:10px;color:var(--gr4)}
 .court-pill{padding:3px 8px;border-radius:3px;border:1px solid var(--gr2);background:var(--b3);color:var(--gr4);cursor:pointer;font-size:10px;font-weight:700;transition:all 0.15s;font-family:'DM Sans',sans-serif}
-.court-pill.avail:hover{border-color:var(--g);color:var(--g)}
+.court-pill.avail:hover{border-color:var(--pk);color:var(--pk)}
 .court-pill.busy{opacity:0.3;cursor:not-allowed}
 
 /* Player items */
@@ -177,7 +177,6 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .fg label{font-size:10px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
 .fc{background:var(--b3);border:1.5px solid var(--gr);border-radius:6px;color:var(--w);padding:7px 10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%;transition:border-color 0.15s}
 .fc:focus{border-color:var(--pkl)}.fc option{background:var(--b3)}
-.skill-slider{width:100%;accent-color:var(--pk);margin-top:4px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
 /* Payment */
@@ -190,7 +189,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .pay-note{background:var(--b3);border:1px solid var(--gr);border-radius:4px;color:var(--w);padding:3px 7px;font-size:11px;font-family:'DM Sans',sans-serif;outline:none;width:100px}
 .pay-note:focus{border-color:var(--pk)}
 .pay-fee-inp{background:var(--b4);border:1px solid var(--gr);border-radius:3px;color:var(--pk);padding:3px 7px;font-size:13px;font-weight:700;font-family:'Bebas Neue',sans-serif;outline:none;width:60px;text-align:center}
-.pay-fee-inp:focus{border-color:var(--gd)}
+.pay-fee-inp:focus{border-color:var(--pk)}
 .pay-summ{display:flex;gap:16px;flex-wrap:wrap}
 .psv{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--pk)}
 .psl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
@@ -214,13 +213,13 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .stat-l{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.07em;margin-top:2px}
 
 /* Log */
-.log-e{padding:8px 11px;background:var(--b3);border-left:3px solid var(--pk);border-radius:0 5px 5px 0;margin-bottom:6px}
+.log-e{padding:8px 11px;background:var(--b3);border-left:3px solid var(--pk);border-radius:0 8px 8px 0;margin-bottom:6px}
 .log-t{font-size:9px;color:var(--gr4);margin-bottom:3px}
 .log-m{font-size:12px;font-weight:600}
 .log-s{font-size:13px;font-weight:800;color:var(--pk);margin-top:2px}
 
 .gdiv{height:1px;background:linear-gradient(90deg,transparent,var(--pkl),transparent);margin:12px 0}
-.chip{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:var(--gg);color:var(--pkd);border:1px solid rgba(232,83,122,0.25)}
+.chip{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:var(--pkg);color:var(--pkd);border:1px solid rgba(232,83,122,0.25)}
 .slist{max-height:340px;overflow-y:auto;padding-right:2px}
 .slist::-webkit-scrollbar{width:3px}
 .slist::-webkit-scrollbar-thumb{background:var(--gr2);border-radius:2px}
@@ -378,7 +377,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div class="two-col">
     <div>
       <div class="sh"><div class="st">Add Player</div></div>
-      <div style="background:var(--b2);border:1px solid var(--gd);border-radius:8px;padding:14px;margin-bottom:14px">
+      <div style="background:var(--b2);border:1px solid var(--pkl);border-radius:8px;padding:14px;margin-bottom:14px">
         <div class="form-row">
           <div class="fg"><label>Full Name</label><input class="fc" id="p-name" placeholder="Player name"/></div>
           <div class="fg"><label>Gender</label>
@@ -417,9 +416,9 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 <!-- ══ PAYMENT ══ -->
 <div class="view" id="view-payment">
-  <div style="background:var(--b2);border:1px solid var(--gd);border-radius:8px;padding:14px;margin-bottom:12px">
+  <div style="background:var(--b2);border:1px solid var(--pkl);border-radius:8px;padding:14px;margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--g);letter-spacing:0.08em">💰 Payment Tracker</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--pk);letter-spacing:0.08em">💰 Payment Tracker</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">
         <span style="font-size:10px;color:var(--gr4)">Fee per player:</span>
         <input class="pay-fee-inp" id="session-fee" type="number" value="50" min="0" oninput="renderPayment()"/>
@@ -806,7 +805,7 @@ function renderSuggestions(){
         <span>Option ${idx+1}</span>
         <span class="mode-tag ${MODE_C[s.mode]||'md'}">${s.mode}</span>
         ${s.genderWarning?`<span style="font-size:9px;color:#E8A04C;border:1px solid #E8A04C55;border-radius:2px;padding:1px 5px">⚠ Gender imbalance</span>`:''}
-        <span style="margin-left:auto;color:var(--g);font-weight:700">${s.balance}% balanced</span>
+        <span style="margin-left:auto;color:var(--pk);font-weight:700">${s.balance}% balanced</span>
       </div>
       <div class="match-grid">
         <div class="tc ta" style="font-size:11px">${s.team1.map(p=>`<div style="font-weight:600;text-align:right">${p.name}</div>`).join('')}</div>
@@ -877,7 +876,7 @@ function updateBuilderUI(){
   if(sa)sa.innerHTML=b.teamA.length?b.teamA.map(p=>`<div class="slot-player">${avHtml(p,18)}<span style="font-size:11px">${p.name}</span><button class="slot-remove" onclick="removeFromBuilder('A',${p.id})">✕</button></div>`).join(''):`<div class="slot-empty">Click players to add</div>`;
   if(sb)sb.innerHTML=b.teamB.length?b.teamB.map(p=>`<div class="slot-player">${avHtml(p,18)}<span style="font-size:11px">${p.name}</span><button class="slot-remove" onclick="removeFromBuilder('B',${p.id})">✕</button></div>`).join(''):`<div class="slot-empty">Click players to add</div>`;
   const cp=document.getElementById('builder-court-pills');
-  if(cp)cp.innerHTML=S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" style="${b.targetCourt===ci?'border-color:var(--g);color:var(--g);background:var(--gg)':''}" onclick="${c.status==='idle'?`setBuilderCourt(${ci})`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('');
+  if(cp)cp.innerHTML=S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" style="${b.targetCourt===ci?'border-color:var(--pk);color:var(--pk);background:var(--pkg)':''}" onclick="${c.status==='idle'?`setBuilderCourt(${ci})`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('');
   const sb2=document.getElementById('builder-start-btn');
   if(sb2)sb2.disabled=!(b.teamA.length===needed&&b.teamB.length===needed&&b.targetCourt!==null&&S.courts[b.targetCourt]?.status==='idle');
 }
@@ -939,7 +938,7 @@ function renderPayment(){
           <div style="font-weight:600;font-size:13px">${p.name}</div>
           <div style="font-size:10px;color:var(--gr4)">${p.gender==='F'?'Female':'Male'} · ${SKILL_N[p.skill]}</div>
         </div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--g);flex-shrink:0">${fee}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--pk);flex-shrink:0">${fee}</div>
         <div style="display:flex;gap:4px;flex-shrink:0">
           <button class="pay-btn ${pay.status==='cash'?'p-cash':''}" onclick="setPayStatus(${p.id},'cash')">💵 Cash</button>
           <button class="pay-btn ${pay.status==='bank'?'p-bank':''}" onclick="setPayStatus(${p.id},'bank')">🏦 Bank</button>
@@ -989,7 +988,7 @@ function renderCourts(){
         <div style="margin-left:auto;display:flex;align-items:center;gap:5px"><span style="font-size:10px;color:var(--gr4)">Idle</span><div class="status-dot dot-idle"></div></div>
       </div>
       ${sug?`<div class="sug-box">
-        <div class="sug-lbl"><span>Best ${cm} match</span><span style="margin-left:auto;color:var(--g);font-weight:700">${sug.balance}% balanced</span></div>
+        <div class="sug-lbl"><span>Best ${cm} match</span><span style="margin-left:auto;color:var(--pk);font-weight:700">${sug.balance}% balanced</span></div>
         <div class="match-grid">
           <div class="tc ta">${sug.team1.map(p=>pChip(p,true)).join('')}</div>
           <div class="vs" style="font-size:15px">VS</div>
