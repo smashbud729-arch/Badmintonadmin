@@ -593,6 +593,11 @@ function restoreSession(){
 
 function clearSession(){
   localStorage.removeItem(LS_KEY);
+  // Reset in-memory state too so nothing bleeds if reload is slow
+  S.players=[];S.queue=[];S.log=[];S.pay={};
+  S.builder={teamA:[],teamB:[],mode:'doubles',targetCourt:null};
+  S.manager={name:'',date:'',venue:''};
+  currentSessionId=null;
   toast('Session cleared ✓');
 }
 
@@ -730,7 +735,7 @@ function setCourtCount(n){
   });
   initCourts(n);render();autoSave();
 }
-function setCourtMode(ci,mode){if(!S.courts[ci].status==='playing')return;S.courts[ci].courtMode=mode;renderCourts()}
+function setCourtMode(ci,mode){if(S.courts[ci].status==='playing')return;S.courts[ci].courtMode=mode;renderCourts()}
 
 function startMatch(ci,sug){
   const court=S.courts[ci];
@@ -981,6 +986,7 @@ function startManualMatch(){
   clearBuilder();
   showView('courts'); // auto-navigate so you see the live timer
   toast('Match started on Court '+(b.targetCourt+1)+' ▶');
+  autoSave();
 }
 function updateBuilderUI(){
   const b=S.builder,needed=b.mode==='singles'?1:2;
@@ -1025,7 +1031,11 @@ function setPayStatus(pid_,status){
   const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
   dbSavePayment(pid_,fee).catch(e=>console.error('DB pay save failed:',e));
 }
-function setPayNote(pid_,note){if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};S.pay[pid_].note=note}
+function setPayNote(pid_,note){
+  if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};
+  S.pay[pid_].note=note;
+  autoSave();
+}
 
 function renderPayment(){
   const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
