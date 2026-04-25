@@ -601,6 +601,9 @@ function autoSave(){
   saveSession(); // localStorage (instant, offline-safe)
   pushSessionSnapshot().catch(()=>{}); // Supabase cloud (async, cross-device)
 }
+
+/* ── Core helpers ── */
+function pid(id){return S.players.find(p=>p.id===id)}
 function wr(p){return p.matches?Math.round(p.wins/p.matches*100):0}
 
 // FAIR score: penalises players who just played so they go to back of priority
