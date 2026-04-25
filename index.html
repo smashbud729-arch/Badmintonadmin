@@ -281,6 +281,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div class="sync-actions">
     <button class="btn btn-o btn-xs" onclick="syncAll()" title="Force sync everything to database">↑ Sync Now</button>
     <button class="btn btn-o btn-xs" onclick="loadFromDB()" title="Reload data from database">↓ Load DB</button>
+    <button class="btn btn-xs" style="background:#FFE8EE;color:var(--pkd);border:1px solid var(--pkl)" onclick="if(confirm('Clear session data and start fresh?')){clearSession();location.reload()}" title="Clear saved session and refresh">✕ New Session</button>
   </div>
 </div>
 
@@ -492,8 +493,114 @@ let S={
   editingSkill:null     // player id currently being edited
 };
 
-/* ── Helpers ── */
-function pid(id){return S.players.find(p=>p.id===id)}
+/* ── Session Persistence (survives page refresh) ── */
+const LS_KEY = 'smashhub_session_v1';
+
+function saveSession(){
+  try{
+    // Strip onCourt/inQueue flags — will be recalculated from courts on restore
+    const snapshot={
+      players: S.players.map(p=>({...p})),
+      queue: [...S.queue],
+      courts: S.courts.map(c=>({
+        id:c.id, courtMode:c.courtMode,
+        status: c.status==='playing'?'playing':'idle',
+        elapsed: c.elapsed||0,
+        match: c.match?{
+          team1: c.match.team1.map(p=>p.id),
+          team2: c.match.team2.map(p=>p.id),
+          score1: c.match.score1,
+          score2: c.match.score2,
+          mode: c.match.mode
+        }:null
+      })),
+      log: S.log,
+      nextId: S.nextId,
+      sugMode: S.sugMode,
+      manager: S.manager,
+      pay: S.pay,
+      queueSort: S.queueSort,
+      currentSessionId: currentSessionId,
+      savedAt: Date.now()
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(snapshot));
+  } catch(e){ console.warn('Session save failed:',e); }
+}
+
+function restoreSession(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return false;
+    const snap = JSON.parse(raw);
+    // Ignore saves older than 24 hours
+    if(Date.now()-snap.savedAt > 86400000){
+      localStorage.removeItem(LS_KEY);
+      return false;
+    }
+    S.players  = snap.players  || [];
+    S.queue    = snap.queue    || [];
+    S.log      = snap.log      || [];
+    S.nextId   = snap.nextId   || 1;
+    S.sugMode  = snap.sugMode  || 'doubles';
+    S.manager  = snap.manager  || {name:'',date:'',venue:''};
+    S.pay      = snap.pay      || {};
+    S.queueSort= snap.queueSort|| 'fairness';
+    currentSessionId = snap.currentSessionId || null;
+
+    // Restore courts, reconnecting match player objects from IDs
+    const courtCount = (snap.courts||[]).length || 3;
+    S.courts = (snap.courts||[]).map((c,i)=>({
+      id: c.id||i+1,
+      courtMode: c.courtMode||'doubles',
+      status: 'idle', match: null, elapsed: 0, timer: null
+    }));
+    // Rehydrate active matches
+    snap.courts.forEach((sc,i)=>{
+      if(sc.status==='playing'&&sc.match){
+        const t1 = (sc.match.team1||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+        const t2 = (sc.match.team2||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+        if(t1.length&&t2.length){
+          S.courts[i].status='playing';
+          S.courts[i].elapsed=sc.elapsed||0;
+          S.courts[i].match={team1:t1,team2:t2,score1:sc.match.score1||0,score2:sc.match.score2||0,mode:sc.match.mode};
+          // Restart timer
+          S.courts[i].timer=setInterval(()=>{S.courts[i].elapsed++;updateTimer(i)},1000);
+          // Mark players as on court
+          [...t1,...t2].forEach(p=>{p.onCourt=true;p.inQueue=false});
+        }
+      }
+    });
+
+    // Update manager badge display
+    if(S.manager.name){
+      document.getElementById('mgr-disp').textContent=S.manager.name;
+      if(S.manager.date){
+        const d=new Date(S.manager.date+'T00:00:00');
+        const ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        document.getElementById('mgr-date-disp').textContent=(S.manager.venue?S.manager.venue+' · ':'')+ds;
+      }
+      document.getElementById('mgr-date-inp').value=S.manager.date||'';
+      document.getElementById('mgr-venue-inp').value=S.manager.venue||'';
+    }
+
+    // Restore court count selector
+    const n=S.courts.length;
+    document.querySelectorAll('.cb').forEach((b,i)=>b.classList.toggle('active',i===n-1));
+
+    return true;
+  } catch(e){ console.warn('Session restore failed:',e); return false; }
+}
+
+function clearSession(){
+  localStorage.removeItem(LS_KEY);
+  toast('Session cleared ✓');
+}
+
+// Auto-save after any state-changing action — both localStorage AND Supabase snapshot
+function autoSave(){
+  saveSession(); // localStorage (instant, offline-safe)
+  pushSessionSnapshot().catch(()=>{}); // Supabase cloud (async, cross-device)
+}
 function wr(p){return p.matches?Math.round(p.wins/p.matches*100):0}
 
 // FAIR score: penalises players who just played so they go to back of priority
@@ -547,7 +654,7 @@ function saveSkill(pid_,val){
   const p=pid(pid_);if(!p)return;
   p.skill=parseInt(val);S.editingSkill=null;
   toast(p.name+' skill → '+SKILL_N[p.skill]);
-  renderAllPlayers();renderQueueList();renderCourts();
+  renderAllPlayers();renderQueueList();renderCourts();autoSave();
   if(p.dbId) dbSavePlayer(p).catch(e=>console.error('Skill update DB:',e));
 }
 function renderAllPlayers(){
@@ -599,7 +706,7 @@ function saveManager(){
     document.getElementById('mgr-date-disp').textContent=(S.manager.venue?S.manager.venue+' · ':'')+ds;
   }
   document.getElementById('mgr-modal').classList.remove('open');
-  toast('Session saved ✓');
+  toast('Session saved ✓');autoSave();
   // Create a fresh session row in Supabase with updated info
   currentSessionId=null;
   ensureSession().catch(e=>console.error('Session create failed:',e));
@@ -616,7 +723,7 @@ function setCourtCount(n){
     clearInterval(c.timer);
     [...c.match.team1,...c.match.team2].forEach(p=>{p.onCourt=false;p.inQueue=true;S.queue.push(p.id)});
   });
-  initCourts(n);render();
+  initCourts(n);render();autoSave();
 }
 function setCourtMode(ci,mode){if(!S.courts[ci].status==='playing')return;S.courts[ci].courtMode=mode;renderCourts()}
 
@@ -632,7 +739,7 @@ function startMatch(ci,sug){
   court.match={team1:sug.team1,team2:sug.team2,score1:0,score2:0,mode:sug.mode};
   court.elapsed=0;
   court.timer=setInterval(()=>{court.elapsed++;const el=document.getElementById('ct'+ci);if(el)el.textContent=fmtTime(court.elapsed)},1000);
-  render();
+  render();autoSave();
 }
 
 function endMatch(ci,winner){
@@ -651,7 +758,7 @@ function endMatch(ci,winner){
   };
   S.log.unshift(entry);
   court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
-  toast('Match recorded — great game!');render();
+  toast('Match recorded — great game!');render();autoSave();
   // Save match + update all player stats in DB (non-blocking)
   dbSaveMatch(entry).catch(e=>console.error('DB match save failed:',e));
   [...winners,...losers].forEach(p=>{
@@ -664,7 +771,7 @@ function cancelMatch(ci){
   clearInterval(court.timer);
   [...court.match.team1,...court.match.team2].forEach(p=>{p.onCourt=false;p.inQueue=true;S.queue.push(p.id)});
   court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
-  toast('Match cancelled');render();
+  toast('Match cancelled');render();autoSave();
 }
 function autoMatchAll(){
   const idle=S.courts.filter(c=>c.status==='idle');
@@ -889,7 +996,7 @@ function addPlayer(){
     mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,inQueue:true,onCourt:false,lastMatchAt:-99};
   S.players.push(p);S.queue.push(p.id);S.pay[p.id]={status:'unpaid',note:''};
   document.getElementById('p-name').value='';
-  toast(p.name+' added to session');render();
+  toast(p.name+' added to session');render();autoSave();
   // Save to Supabase asynchronously (non-blocking)
   dbSavePlayer(p).catch(e=>console.error('DB save player failed:',e));
 }
@@ -897,19 +1004,19 @@ function toggleQueue(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
   if(p.inQueue){p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);toast(p.name+' left queue')}
   else{p.inQueue=true;S.queue.push(pid_);toast(p.name+' joined queue')}
-  render();
+  render();autoSave();
 }
 function removePlayer(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
   S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);delete S.pay[pid_];
-  toast(p.name+' removed');render();
+  toast(p.name+' removed');render();autoSave();
   if(p.dbId) dbDeletePlayer(p).catch(e=>console.error('DB delete failed:',e));
 }
 
 /* ── Payment ── */
 function setPayStatus(pid_,status){
   if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};
-  S.pay[pid_].status=status;renderPayment();
+  S.pay[pid_].status=status;renderPayment();autoSave();
   const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
   dbSavePayment(pid_,fee).catch(e=>console.error('DB pay save failed:',e));
 }
@@ -1296,13 +1403,13 @@ async function dbSavePayment(playerId,fee){
   if(res.error) console.error('Payment save error:',res.error);
 }
 
-/* ── Load from DB ── */
+/* ── Load players from DB (all-time roster) ── */
 async function loadFromDB(){
   const sb=getSupabase();
   if(!sb){toast('⚠ Supabase not ready');return;}
-  syncStatus('busy','Loading from database…');
+  syncStatus('busy','Loading players…');
   const res=await sb.from('players').select('*').order('created_at',{ascending:false}).limit(200);
-  if(res.error){syncStatus('err','Failed to load: '+res.error.message);return;}
+  if(res.error){syncStatus('err','Failed: '+res.error.message);return;}
   const players=res.data||[];
   if(players.length>0){
     players.forEach(row=>{
@@ -1316,53 +1423,151 @@ async function loadFromDB(){
         });
       }
     });
-    syncStatus('ok',`Loaded ${players.length} player${players.length>1?'s':''} from DB`);
-    render();
+    syncStatus('ok',`Loaded ${players.length} player${players.length>1?'s':''}`);
+    render();autoSave();
     toast(`Loaded ${players.length} players from Supabase ↓`);
   } else {
-    syncStatus('ok','Database is empty — start adding players');
-    toast('No players in DB yet');
+    syncStatus('ok','No players in DB yet');
+    toast('Database is empty — start adding players');
   }
+}
+
+/* ── Push full session snapshot to Supabase (cross-device) ── */
+async function pushSessionSnapshot(){
+  const sid=await ensureSession();
+  if(!sid)return;
+  const sb=getSupabase();if(!sb)return;
+  const snapshot={
+    players:S.players.map(p=>({
+      localId:p.id,dbId:p.dbId||null,
+      name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,
+      wins:p.wins,losses:p.losses,matches:p.matches,
+      inQueue:p.inQueue,onCourt:p.onCourt,lastMatchAt:p.lastMatchAt||-99
+    })),
+    queue:S.queue,log:S.log,pay:S.pay,
+    nextId:S.nextId,sugMode:S.sugMode,queueSort:S.queueSort,manager:S.manager,
+    courtStates:S.courts.map(c=>({
+      id:c.id,courtMode:c.courtMode,
+      status:c.status==='playing'?'playing':'idle',
+      elapsed:c.elapsed||0,
+      match:c.match?{
+        team1Ids:c.match.team1.map(p=>p.id),
+        team2Ids:c.match.team2.map(p=>p.id),
+        score1:c.match.score1,score2:c.match.score2,mode:c.match.mode
+      }:null
+    })),
+    savedAt:new Date().toISOString()
+  };
+  await sb.from('sessions').update({snapshot:JSON.stringify(snapshot)}).eq('id',sid);
+}
+
+/* ── Load latest session from Supabase (restores on any device) ── */
+async function loadLatestSession(){
+  const sb=getSupabase();if(!sb)return false;
+  syncStatus('busy','Checking cloud for saved session…');
+  const res=await sb.from('sessions')
+    .select('id,manager_name,session_date,venue,snapshot')
+    .not('snapshot','is',null)
+    .order('created_at',{ascending:false})
+    .limit(1);
+  if(res.error||!res.data||!res.data.length) return false;
+  const row=res.data[0];
+  let snap;
+  try{ snap=JSON.parse(row.snapshot); }catch(e){ return false; }
+  if(!snap.players||!snap.players.length) return false;
+  if(snap.savedAt&&(Date.now()-new Date(snap.savedAt).getTime())>86400000) return false;
+
+  currentSessionId=row.id;
+  S.nextId=snap.nextId||1;
+  S.sugMode=snap.sugMode||'doubles';
+  S.queueSort=snap.queueSort||'fairness';
+  S.log=snap.log||[];
+  S.pay=snap.pay||{};
+  S.manager=snap.manager||{name:row.manager_name||'',date:row.session_date||'',venue:row.venue||''};
+  S.players=(snap.players||[]).map(p=>({
+    id:p.localId,dbId:p.dbId||null,
+    name:p.name,gender:p.gender,skill:p.skill,mode:p.mode||'any',
+    wins:p.wins||0,losses:p.losses||0,matches:p.matches||0,
+    inQueue:p.inQueue||false,onCourt:p.onCourt||false,lastMatchAt:p.lastMatchAt||-99
+  }));
+  S.queue=snap.queue||[];
+
+  const cs=snap.courtStates||[];
+  S.courts=cs.length>0?cs.map((c,i)=>({
+    id:c.id||i+1,courtMode:c.courtMode||'doubles',
+    status:'idle',match:null,elapsed:0,timer:null
+  })):[1,2,3].map(n=>({id:n,courtMode:'doubles',status:'idle',match:null,elapsed:0,timer:null}));
+
+  cs.forEach((sc,i)=>{
+    if(sc.status==='playing'&&sc.match&&S.courts[i]){
+      const t1=(sc.match.team1Ids||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+      const t2=(sc.match.team2Ids||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+      if(t1.length&&t2.length){
+        S.courts[i].status='playing';
+        S.courts[i].elapsed=sc.elapsed||0;
+        S.courts[i].match={team1:t1,team2:t2,score1:sc.match.score1||0,score2:sc.match.score2||0,mode:sc.match.mode};
+        S.courts[i].timer=setInterval(()=>{S.courts[i].elapsed++;updateTimer(i)},1000);
+        [...t1,...t2].forEach(p=>{p.onCourt=true;p.inQueue=false;});
+      }
+    }
+  });
+
+  if(S.manager.name){
+    document.getElementById('mgr-disp').textContent=S.manager.name;
+    if(S.manager.date){
+      const d=new Date(S.manager.date+'T00:00:00');
+      document.getElementById('mgr-date-disp').textContent=
+        (S.manager.venue?S.manager.venue+' · ':'')+
+        d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    }
+    document.getElementById('mgr-date-inp').value=S.manager.date||'';
+    document.getElementById('mgr-venue-inp').value=S.manager.venue||'';
+  }
+  const n=S.courts.length;
+  document.querySelectorAll('.cb').forEach((b,i)=>b.classList.toggle('active',i===n-1));
+  return true;
 }
 
 /* ── Sync everything ── */
 async function syncAll(){
   const sb=getSupabase();
   if(!sb){toast('⚠ Supabase not ready');return;}
-  syncStatus('busy','Syncing all data…');
+  syncStatus('busy','Syncing…');
   await ensureSession();
   for(const p of S.players){ await dbSavePlayer(p); }
   const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
   for(const p of S.players){ await dbSavePayment(p.id,fee); }
+  await pushSessionSnapshot();
   syncStatus('ok',`Synced ${S.players.length} players · ${S.log.length} matches`);
   toast('All data synced to Supabase ✓');
 }
 
 /* ── DB hooks are called directly from the core functions ── */
 
-// Auto-connect on load
 async function initSupabase(){
   syncStatus('busy','Connecting…');
   const sb=getSupabase();
-  if(!sb){
-    syncStatus('err','Supabase CDN failed to load');
-    toast('⚠ Supabase CDN not loaded');
-    return;
-  }
-  const res=await sb.from('players').select('id').limit(1);
-  if(!res.error){
-    syncStatus('ok','Connected to Supabase ✓');
-    toast('Supabase connected ✓');
-  } else {
-    syncStatus('err','DB error: '+res.error.message);
-    toast('⚠ Supabase error — check console');
-    console.error('Supabase init error:',res.error);
-  }
+  if(!sb){syncStatus('err','Supabase CDN failed');toast('⚠ Supabase CDN not loaded');return;}
+  const test=await sb.from('players').select('id').limit(1);
+  if(test.error){syncStatus('err','DB error: '+test.error.message);toast('⚠ Supabase error');return;}
+
+  // 1st priority: restore from Supabase cloud (works across devices)
+  const cloudOk=await loadLatestSession();
+  if(cloudOk){render();autoSave();toast('☁ Session restored from cloud — welcome back!');return;}
+
+  // 2nd priority: restore from localStorage (same device, offline)
+  const localOk=restoreSession();
+  if(localOk){render();pushSessionSnapshot().catch(()=>{});toast('Session restored locally ✓');return;}
+
+  // Fresh start
+  syncStatus('ok','Connected to Supabase ✓');
+  toast('Supabase connected ✓');
 }
 
 // Init
 document.getElementById('mgr-date-inp').value=new Date().toISOString().slice(0,10);
-initCourts(3);render();
+initCourts(3);
+render();
 initSupabase();
 </script>
 </body>
