@@ -1194,10 +1194,11 @@ function renderPayment(){
   const bank=document.getElementById('bank-acct')?.value||'';
   const pl=document.getElementById('payment-list'),ps=document.getElementById('pay-summ');
   if(!pl)return;
-  // Only include players who are in the queue or currently on court
-  // (these are the active session participants who will play and pay)
+  // Source of truth: S.queue array + players currently on court
+  // inQueue flag can be stale after DB load — always check S.queue directly
+  const queuedIds = new Set(S.queue);
   const activePlayers=[...S.players]
-    .filter(p=>p.inQueue||p.onCourt)
+    .filter(p => queuedIds.has(p.id) || p.onCourt)
     .sort((a,b)=>a.name.localeCompare(b.name));
   let cash=0,bk=0,unp=0;
   activePlayers.forEach(p=>{const s=(S.pay[p.id]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
