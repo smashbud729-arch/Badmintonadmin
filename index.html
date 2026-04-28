@@ -204,20 +204,8 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .fc:focus{border-color:var(--pkl)}.fc option{background:var(--b3)}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-/* Payment */
-.pay-row{display:flex;align-items:center;gap:9px;padding:9px 12px;background:var(--b2);border:1px solid var(--gr);border-radius:8px;margin-bottom:6px;flex-wrap:wrap}
-.pay-info{flex:1;min-width:0}
-.pay-btn{padding:4px 9px;border-radius:3px;border:1px solid var(--gr2);background:var(--b4);color:var(--gr4);cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;transition:all 0.15s;font-family:'DM Sans',sans-serif}
-.pay-btn.p-cash{background:#EDFAF4;border-color:#9ED4B8;color:#2E7D52}
-.pay-btn.p-bank{background:#EEF3FF;border-color:#B3C8F0;color:var(--blue)}
-.pay-btn.p-unpaid{background:var(--b4);border-color:var(--pkl);color:var(--pkd)}
-.pay-note{background:var(--b3);border:1px solid var(--gr);border-radius:4px;color:var(--w);padding:3px 7px;font-size:11px;font-family:'DM Sans',sans-serif;outline:none;width:100px}
 .pay-note:focus{border-color:var(--pk)}
-.pay-fee-inp{background:var(--b4);border:1px solid var(--gr);border-radius:3px;color:var(--pk);padding:3px 7px;font-size:13px;font-weight:700;font-family:'Bebas Neue',sans-serif;outline:none;width:60px;text-align:center}
 .pay-fee-inp:focus{border-color:var(--pk)}
-.pay-summ{display:flex;gap:16px;flex-wrap:wrap}
-.psv{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--pk)}
-.psl{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
 
 /* Leaderboard tabs */
 .lb-tab{padding:7px 18px;border-radius:6px;border:1.5px solid var(--gr2);background:var(--b2);color:var(--gr4);cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;font-family:'DM Sans',sans-serif}
@@ -285,12 +273,6 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 [data-theme="dark"] .court-card.playing{border-color:var(--pkl)}
 [data-theme="dark"] .modal{background:#161616;border-color:var(--pkl)}
 [data-theme="dark"] .backdrop{background:#00000099}
-[data-theme="dark"] .pay-row{background:#1E1E1E;border-color:#444}
-[data-theme="dark"] .pay-btn{background:#2A2A2A;border-color:#444;color:#AAA}
-[data-theme="dark"] .pay-btn.p-cash{background:#1A3A1A;border-color:#2EA84A;color:#3DB354}
-[data-theme="dark"] .pay-btn.p-bank{background:#1A2A3A;border-color:var(--male);color:var(--male)}
-[data-theme="dark"] .pay-btn.p-unpaid{background:#3A1A1A;border-color:var(--pkl);color:#FF8888}
-[data-theme="dark"] .pay-note,.dark .pay-fee-inp{background:#2A2A2A;border-color:#444;color:var(--w)}
 [data-theme="dark"] .sug-box{background:#1E1E1E;border-color:var(--pkd)}
 [data-theme="dark"] .builder{background:#161616;border-color:var(--pkd)}
 [data-theme="dark"] .team-slot{background:#1E1E1E;border-color:#444}
@@ -393,7 +375,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div class="nt active" onclick="showView('courts')">Courts</div>
   <div class="nt" onclick="showView('queue')">Queue</div>
   <div class="nt" onclick="showView('players')">Players</div>
-  <div class="nt" onclick="showView('payment')">Payment</div>
+  
   <div class="nt" onclick="showView('leaderboard')">Leaderboard</div>
 </div>
 
@@ -504,23 +486,6 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   </div>
 </div>
 
-<!-- ══ PAYMENT ══ -->
-<div class="view" id="view-payment">
-  <div style="background:var(--b2);border:1px solid var(--pkl);border-radius:8px;padding:14px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--pk);letter-spacing:0.08em">💰 Payment Tracker</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">
-        <span style="font-size:10px;color:var(--gr4)">Fee per player:</span>
-        <input class="pay-fee-inp" id="session-fee" type="number" value="50" min="0" oninput="renderPayment()"/>
-        <span style="font-size:10px;color:var(--gr4)">Bank details:</span>
-        <input class="fc" id="bank-acct" placeholder="Bank / Acct No." style="width:170px;padding:4px 8px;font-size:11px" oninput="renderPayment()"/>
-      </div>
-    </div>
-    <div class="pay-summ" id="pay-summ"></div>
-  </div>
-  <div id="payment-list"></div>
-</div>
-
 <!-- ══ LEADERBOARD ══ -->
 <div class="view" id="view-leaderboard">
   <!-- Global stats bar -->
@@ -577,7 +542,6 @@ let S={
   sugMode:'doubles',
   builder:{teamA:[],teamB:[],mode:'doubles',targetCourt:null},
   manager:{name:'',date:'',venue:''},
-  pay:{},
   queueSort:'fairness', // fairness | alpha | matches | winpct | skill
   editingSkill:null,    // player id currently having skill edited
   editingName:null      // player id currently having name edited
@@ -608,7 +572,6 @@ function saveSession(){
       nextId: S.nextId,
       sugMode: S.sugMode,
       manager: S.manager,
-      pay: S.pay,
       queueSort: S.queueSort,
       currentSessionId: currentSessionId,
       savedAt: Date.now()
@@ -633,7 +596,6 @@ function restoreSession(){
     S.nextId   = snap.nextId   || 1;
     S.sugMode  = snap.sugMode  || 'doubles';
     S.manager  = snap.manager  || {name:'',date:'',venue:''};
-    S.pay      = snap.pay      || {};
     S.queueSort= snap.queueSort|| 'fairness';
     currentSessionId = snap.currentSessionId || null;
 
@@ -692,7 +654,7 @@ function restoreSession(){
 function clearSession(){
   localStorage.removeItem(LS_KEY);
   // Reset in-memory state too so nothing bleeds if reload is slow
-  S.players=[];S.queue=[];S.log=[];S.pay={};
+  S.players=[];S.queue=[];S.log=[];
   S.builder={teamA:[],teamB:[],mode:'doubles',targetCourt:null};
   S.manager={name:'',date:'',venue:''};
   currentSessionId=null;
@@ -1166,7 +1128,7 @@ function addPlayer(){
   if(!name){toast('Enter a player name');return}
   const p={id:S.nextId++,name,gender:document.getElementById('p-gender').value,skill:parseInt(document.getElementById('p-skill').value),
     mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,inQueue:true,onCourt:false,lastMatchAt:-99};
-  S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
+  S.players.push(p);S.queue.push(p.id);
   document.getElementById('p-name').value='';
   toast(p.name+' added to session');render();autoSave();
   // Save to Supabase asynchronously (non-blocking)
@@ -1180,66 +1142,9 @@ function toggleQueue(pid_){
 }
 function removePlayer(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
-  S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);delete S.pay[String(pid_)];
+  S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);
   toast(p.name+' removed');render();autoSave();
   if(p.dbId) dbDeletePlayer(p).catch(e=>console.error('DB delete failed:',e));
-}
-
-/* ── Payment ── */
-function setPayStatus(pid_,status){
-  const key=String(pid_);
-  if(!S.pay[key])S.pay[key]={status:'unpaid',note:''};
-  S.pay[key].status=status;renderPayment();autoSave();
-  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
-  dbSavePayment(pid_,fee).catch(e=>console.error('DB pay save failed:',e));
-}
-function setPayNote(pid_,note){
-  const key=String(pid_);
-  if(!S.pay[key])S.pay[key]={status:'unpaid',note:''};
-  S.pay[key].note=note;
-  autoSave();
-}
-
-function renderPayment(){
-  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
-  const bank=document.getElementById('bank-acct')?.value||'';
-  const pl=document.getElementById('payment-list'),ps=document.getElementById('pay-summ');
-  if(!pl)return;
-  // Show only players actively in the queue or on court right now
-  // p.inQueue is always reconciled with S.queue on restore, so this is reliable
-  const activePlayers=[...S.players]
-    .filter(p => p.inQueue || p.onCourt)
-    .sort((a,b)=>a.name.localeCompare(b.name));
-  let cash=0,bk=0,unp=0;
-  activePlayers.forEach(p=>{const s=(S.pay[String(p.id)]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
-  if(ps)ps.innerHTML=`
-    <div><div class="psv" style="color:#3DB354">${cash+bk}</div><div class="psl">Collected</div></div>
-    <div><div class="psv" style="color:#FF8888">${unp}</div><div class="psl">Pending</div></div>
-    <div><div class="psv">${(cash+bk+unp)}</div><div class="psl">Total</div></div>
-    <div><div class="psv">${activePlayers.length}</div><div class="psl">Players</div></div>`;
-  if(!activePlayers.length){pl.innerHTML='<div class="empty-state">No players in the queue yet.<br>Add players to the queue to track payments.</div>';return}
-  pl.innerHTML=(bank?`<div class="info-note" style="margin-bottom:10px">Bank transfer to: <b>${bank}</b></div>`:'')+
-    activePlayers.map(p=>{
-      if(!S.pay[String(p.id)])S.pay[String(p.id)]={status:'unpaid',note:''};
-      const pay=S.pay[String(p.id)];
-      const statusTag=p.onCourt
-        ?`<span style="font-size:9px;font-weight:700;color:#3DA06A;border:1px solid #3DA06A;border-radius:2px;padding:1px 5px">ON COURT</span>`
-        :`<span style="font-size:9px;font-weight:700;color:var(--pk);border:1px solid var(--pkl);border-radius:2px;padding:1px 5px">IN QUEUE</span>`;
-      return `<div class="pay-row">
-        ${avHtml(p,28)}
-        <div class="pay-info">
-          <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px">${p.name} ${statusTag}</div>
-          <div style="font-size:10px;color:var(--gr4)">${p.gender==='F'?'Female':'Male'} · ${SKILL_N[p.skill]}</div>
-        </div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--pk);flex-shrink:0">${fee}</div>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          <button class="pay-btn ${pay.status==='cash'?'p-cash':''}" onclick="setPayStatus(${p.id},'cash')">💵 Cash</button>
-          <button class="pay-btn ${pay.status==='bank'?'p-bank':''}" onclick="setPayStatus(${p.id},'bank')">🏦 Bank</button>
-          <button class="pay-btn ${pay.status==='unpaid'?'p-unpaid':''}" onclick="setPayStatus(${p.id},'unpaid')">✕</button>
-        </div>
-        <input class="pay-note" placeholder="Note..." value="${pay.note||''}" oninput="setPayNote(${p.id},this.value)"/>
-      </div>`;
-    }).join('');
 }
 
 /* ── Renders ── */
@@ -1342,7 +1247,6 @@ function render(){
     </div>`).join(''):`<div class="empty-state">No matches recorded yet</div>`;
 
   // Payment
-  renderPayment();
 
   renderLeaderboard();
 
@@ -1472,7 +1376,7 @@ function showView(v){
   document.querySelectorAll('.nt').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   document.querySelectorAll('.nt').forEach(el=>{if(el.textContent.toLowerCase()===v)el.classList.add('active')});
-  if(v==='payment')renderPayment();else render();
+  render();
 }
 
 let toastTimer;
@@ -1572,23 +1476,6 @@ async function dbSaveMatch(entry){
   else{if(res.data&&res.data[0])entry.dbId=res.data[0].id;syncStatus('ok','Match saved ✓');}
 }
 
-/* ── Payment ── */
-async function dbSavePayment(playerId,fee){
-  const sid=await ensureSession();if(!sid)return;
-  const sb=getSupabase();if(!sb)return;
-  const p=pid(playerId);if(!p)return;
-  const pay=S.pay[String(playerId)]||{status:'unpaid',note:''};
-  const row={session_id:sid,player_name:p.name,amount:fee,status:pay.status,note:pay.note||''};
-  let res;
-  if(pay.dbId){
-    res=await sb.from('payments').update(row).eq('id',pay.dbId).select();
-  } else {
-    res=await sb.from('payments').insert(row).select();
-    if(!res.error&&res.data&&res.data[0]) pay.dbId=res.data[0].id;
-  }
-  if(res.error) console.error('Payment save error:',res.error);
-}
-
 /* ── Load players from DB ── */
 async function loadFromDB(){
   const sb=getSupabase();
@@ -1625,8 +1512,6 @@ async function syncAll(){
   syncStatus('busy','Syncing…');
   await ensureSession();
   for(const p of S.players){ await dbSavePlayer(p); }
-  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
-  for(const p of S.players){ await dbSavePayment(p.id,fee); }
   syncStatus('ok',`Synced ${S.players.length} players · ${S.log.length} matches`);
   toast('All data synced to Supabase ✓');
 }
