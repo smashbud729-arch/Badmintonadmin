@@ -1157,7 +1157,7 @@ function addPlayer(){
   if(!name){toast('Enter a player name');return}
   const p={id:S.nextId++,name,gender:document.getElementById('p-gender').value,skill:parseInt(document.getElementById('p-skill').value),
     mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,inQueue:true,onCourt:false,lastMatchAt:-99};
-  S.players.push(p);S.queue.push(p.id);S.pay[p.id]={status:'unpaid',note:''};
+  S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
   document.getElementById('p-name').value='';
   toast(p.name+' added to session');render();autoSave();
   // Save to Supabase asynchronously (non-blocking)
@@ -1171,21 +1171,23 @@ function toggleQueue(pid_){
 }
 function removePlayer(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
-  S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);delete S.pay[pid_];
+  S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);delete S.pay[String(pid_)];
   toast(p.name+' removed');render();autoSave();
   if(p.dbId) dbDeletePlayer(p).catch(e=>console.error('DB delete failed:',e));
 }
 
 /* ── Payment ── */
 function setPayStatus(pid_,status){
-  if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};
-  S.pay[pid_].status=status;renderPayment();autoSave();
+  const key=String(pid_);
+  if(!S.pay[key])S.pay[key]={status:'unpaid',note:''};
+  S.pay[key].status=status;renderPayment();autoSave();
   const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
   dbSavePayment(pid_,fee).catch(e=>console.error('DB pay save failed:',e));
 }
 function setPayNote(pid_,note){
-  if(!S.pay[pid_])S.pay[pid_]={status:'unpaid',note:''};
-  S.pay[pid_].note=note;
+  const key=String(pid_);
+  if(!S.pay[key])S.pay[key]={status:'unpaid',note:''};
+  S.pay[key].note=note;
   autoSave();
 }
 
@@ -1201,7 +1203,7 @@ function renderPayment(){
     .filter(p => queuedIds.has(p.id) || p.onCourt)
     .sort((a,b)=>a.name.localeCompare(b.name));
   let cash=0,bk=0,unp=0;
-  activePlayers.forEach(p=>{const s=(S.pay[p.id]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
+  activePlayers.forEach(p=>{const s=(S.pay[String(p.id)]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
   if(ps)ps.innerHTML=`
     <div><div class="psv" style="color:#3DB354">${cash+bk}</div><div class="psl">Collected</div></div>
     <div><div class="psv" style="color:#FF8888">${unp}</div><div class="psl">Pending</div></div>
@@ -1210,8 +1212,8 @@ function renderPayment(){
   if(!activePlayers.length){pl.innerHTML='<div class="empty-state">No players in the queue yet.<br>Add players to the queue to track payments.</div>';return}
   pl.innerHTML=(bank?`<div class="info-note" style="margin-bottom:10px">Bank transfer to: <b>${bank}</b></div>`:'')+
     activePlayers.map(p=>{
-      if(!S.pay[p.id])S.pay[p.id]={status:'unpaid',note:''};
-      const pay=S.pay[p.id];
+      if(!S.pay[String(p.id)])S.pay[String(p.id)]={status:'unpaid',note:''};
+      const pay=S.pay[String(p.id)];
       const statusTag=p.onCourt
         ?`<span style="font-size:9px;font-weight:700;color:#3DA06A;border:1px solid #3DA06A;border-radius:2px;padding:1px 5px">ON COURT</span>`
         :`<span style="font-size:9px;font-weight:700;color:var(--pk);border:1px solid var(--pkl);border-radius:2px;padding:1px 5px">IN QUEUE</span>`;
