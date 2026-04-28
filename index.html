@@ -579,7 +579,8 @@ let S={
   manager:{name:'',date:'',venue:''},
   pay:{},
   queueSort:'fairness', // fairness | alpha | matches | winpct | skill
-  editingSkill:null     // player id currently being edited
+  editingSkill:null,    // player id currently having skill edited
+  editingName:null      // player id currently having name edited
 };
 
 /* ── Session Persistence (survives page refresh) ── */
@@ -1569,7 +1570,7 @@ async function dbSavePayment(playerId,fee){
   const sid=await ensureSession();if(!sid)return;
   const sb=getSupabase();if(!sb)return;
   const p=pid(playerId);if(!p)return;
-  const pay=S.pay[playerId]||{status:'unpaid',note:''};
+  const pay=S.pay[String(playerId)]||{status:'unpaid',note:''};
   const row={session_id:sid,player_name:p.name,amount:fee,status:pay.status,note:pay.note||''};
   let res;
   if(pay.dbId){
