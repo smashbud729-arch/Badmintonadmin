@@ -637,6 +637,14 @@ function restoreSession(){
     S.queueSort= snap.queueSort|| 'fairness';
     currentSessionId = snap.currentSessionId || null;
 
+    // Reconcile inQueue flag with S.queue array (source of truth)
+    // This prevents stale flags causing payment/queue display bugs
+    const qSet = new Set(S.queue);
+    S.players.forEach(p=>{
+      p.inQueue = qSet.has(Number(p.id));
+      p.onCourt = false; // will be reset when courts are rehydrated below
+    });
+
     // Restore courts, reconnecting match player objects from IDs
     const courtCount = (snap.courts||[]).length || 3;
     S.courts = (snap.courts||[]).map((c,i)=>({
@@ -1197,12 +1205,10 @@ function renderPayment(){
   const bank=document.getElementById('bank-acct')?.value||'';
   const pl=document.getElementById('payment-list'),ps=document.getElementById('pay-summ');
   if(!pl)return;
-  // Source of truth: S.queue array + players currently on court
-  // inQueue flag can be stale after DB load — always check S.queue directly
-  // Build set of queued IDs as numbers — S.queue may contain strings after JSON restore
-  const queuedIds = new Set(S.queue.map(id=>Number(id)));
+  // Show only players actively in the queue or on court right now
+  // p.inQueue is always reconciled with S.queue on restore, so this is reliable
   const activePlayers=[...S.players]
-    .filter(p => queuedIds.has(Number(p.id)) || p.onCourt)
+    .filter(p => p.inQueue || p.onCourt)
     .sort((a,b)=>a.name.localeCompare(b.name));
   let cash=0,bk=0,unp=0;
   activePlayers.forEach(p=>{const s=(S.pay[String(p.id)]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
