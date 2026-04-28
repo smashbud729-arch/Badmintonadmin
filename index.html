@@ -1194,22 +1194,30 @@ function renderPayment(){
   const bank=document.getElementById('bank-acct')?.value||'';
   const pl=document.getElementById('payment-list'),ps=document.getElementById('pay-summ');
   if(!pl)return;
+  // Only include players who are in the queue or currently on court
+  // (these are the active session participants who will play and pay)
+  const activePlayers=[...S.players]
+    .filter(p=>p.inQueue||p.onCourt)
+    .sort((a,b)=>a.name.localeCompare(b.name));
   let cash=0,bk=0,unp=0;
-  S.players.forEach(p=>{const s=(S.pay[p.id]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
+  activePlayers.forEach(p=>{const s=(S.pay[p.id]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
   if(ps)ps.innerHTML=`
     <div><div class="psv" style="color:#3DB354">${cash+bk}</div><div class="psl">Collected</div></div>
     <div><div class="psv" style="color:#FF8888">${unp}</div><div class="psl">Pending</div></div>
     <div><div class="psv">${(cash+bk+unp)}</div><div class="psl">Total</div></div>
-    <div><div class="psv">${S.players.length}</div><div class="psl">Players</div></div>`;
-  if(!S.players.length){pl.innerHTML='<div class="empty-state">No players in session yet.</div>';return}
+    <div><div class="psv">${activePlayers.length}</div><div class="psl">Players</div></div>`;
+  if(!activePlayers.length){pl.innerHTML='<div class="empty-state">No players in the queue yet.<br>Add players to the queue to track payments.</div>';return}
   pl.innerHTML=(bank?`<div class="info-note" style="margin-bottom:10px">Bank transfer to: <b>${bank}</b></div>`:'')+
-    S.players.map(p=>{
+    activePlayers.map(p=>{
       if(!S.pay[p.id])S.pay[p.id]={status:'unpaid',note:''};
       const pay=S.pay[p.id];
+      const statusTag=p.onCourt
+        ?`<span style="font-size:9px;font-weight:700;color:#3DA06A;border:1px solid #3DA06A;border-radius:2px;padding:1px 5px">ON COURT</span>`
+        :`<span style="font-size:9px;font-weight:700;color:var(--pk);border:1px solid var(--pkl);border-radius:2px;padding:1px 5px">IN QUEUE</span>`;
       return `<div class="pay-row">
         ${avHtml(p,28)}
         <div class="pay-info">
-          <div style="font-weight:600;font-size:13px">${p.name}</div>
+          <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px">${p.name} ${statusTag}</div>
           <div style="font-size:10px;color:var(--gr4)">${p.gender==='F'?'Female':'Male'} · ${SKILL_N[p.skill]}</div>
         </div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--pk);flex-shrink:0">${fee}</div>
