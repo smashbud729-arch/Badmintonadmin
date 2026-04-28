@@ -628,7 +628,7 @@ function restoreSession(){
       return false;
     }
     S.players  = snap.players  || [];
-    S.queue    = snap.queue    || [];
+    S.queue    = (snap.queue||[]).map(id=>Number(id));
     S.log      = snap.log      || [];
     S.nextId   = snap.nextId   || 1;
     S.sugMode  = snap.sugMode  || 'doubles';
@@ -947,7 +947,7 @@ function clearAllCourts(){S.courts.forEach((_,i)=>{if(S.courts[i].status==='play
 
 /* ── Matchmaking (FAIR + gender-balanced + excludes on-court players) ── */
 function availablePlayers(){
-  return S.queue.map(id=>pid(id)).filter(p=>p&&!p.onCourt);
+  return S.queue.map(id=>pid(Number(id))).filter(p=>p&&!p.onCourt);
 }
 
 // Gender balance score for a team: ideal is 1M+1F for doubles, 1M+1F for mixed
@@ -1199,9 +1199,10 @@ function renderPayment(){
   if(!pl)return;
   // Source of truth: S.queue array + players currently on court
   // inQueue flag can be stale after DB load — always check S.queue directly
-  const queuedIds = new Set(S.queue);
+  // Build set of queued IDs as numbers — S.queue may contain strings after JSON restore
+  const queuedIds = new Set(S.queue.map(id=>Number(id)));
   const activePlayers=[...S.players]
-    .filter(p => queuedIds.has(p.id) || p.onCourt)
+    .filter(p => queuedIds.has(Number(p.id)) || p.onCourt)
     .sort((a,b)=>a.name.localeCompare(b.name));
   let cash=0,bk=0,unp=0;
   activePlayers.forEach(p=>{const s=(S.pay[String(p.id)]||{}).status;if(s==='cash')cash+=fee;else if(s==='bank')bk+=fee;else unp+=fee});
@@ -1291,7 +1292,7 @@ function renderCourts(){
 function renderQueueList(){
   const ql=document.getElementById('queue-list');if(!ql)return;
   // Only show players in queue and NOT on court
-  const qp=S.queue.map(id=>pid(id)).filter(p=>p&&!p.onCourt);
+  const qp=S.queue.map(id=>pid(Number(id))).filter(p=>p&&!p.onCourt);
   const qcount=document.getElementById('q-count');
   if(qcount)qcount.textContent=qp.length+' waiting';
   const sorted=sortedQueue(qp);
