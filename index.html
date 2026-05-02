@@ -1241,6 +1241,8 @@ function setPayStatus(pid_,status){
   if(!S.pay[key])S.pay[key]={status:'unpaid',note:''};
   S.pay[key].status=status;
   renderPayment();autoSave();
+  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
+  dbSavePayment(pid_,fee).catch(e=>console.error('DB pay failed:',e));
 }
 function setPayNote(pid_,note){
   const key=String(pid_);
@@ -1576,6 +1578,24 @@ async function dbSaveMatch(entry){
   }).select();
   if(res.error){console.error('Match save error:',res.error);syncStatus('err','Match save failed');}
   else{if(res.data&&res.data[0])entry.dbId=res.data[0].id;syncStatus('ok','Match saved ✓');}
+}
+
+/* ── Payment DB ── */
+async function dbSavePayment(playerId,fee){
+  const sid=await ensureSession();if(!sid)return;
+  const sb=getSupabase();if(!sb)return;
+  const p=pid(Number(playerId));if(!p)return;
+  const key=String(playerId);
+  const pay=S.pay[key]||{status:'unpaid',note:''};
+  const row={session_id:sid,player_name:p.name,amount:fee,status:pay.status,note:pay.note||''};
+  let res;
+  if(pay.dbId){
+    res=await sb.from('payments').update(row).eq('id',pay.dbId).select();
+  } else {
+    res=await sb.from('payments').insert(row).select();
+    if(!res.error&&res.data&&res.data[0]) pay.dbId=res.data[0].id;
+  }
+  if(res&&res.error) console.error('Payment save error:',res.error);
 }
 
 /* ── Load players from DB ── */
