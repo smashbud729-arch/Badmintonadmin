@@ -513,9 +513,15 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div class="gdiv"></div>
 
   <!-- Tab toggle -->
-  <div style="display:flex;gap:6px;margin-bottom:14px">
+  <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
     <button class="lb-tab active" id="lbt-overall" onclick="setLbTab('overall')">🏆 Overall Rankings</button>
     <button class="lb-tab" id="lbt-session" onclick="setLbTab('session')">📋 This Session</button>
+    <div style="margin-left:auto">
+      <button class="btn btn-xs" id="lb-reset-btn"
+        style="background:#FFE8EE;color:var(--pkd);border:1px solid var(--pkl);font-size:10px"
+        onclick="resetLeaderboard()"
+        title="Reset stats for the current view">↺ Reset Records</button>
+    </div>
   </div>
 
   <!-- Overall Rankings -->
@@ -1628,11 +1634,40 @@ async function loadFromDB(){
 }
 
 /* ── Sync everything ── */
+/* ── Reset Leaderboard Records ── */
+async function resetLeaderboard(){
+  const isOverall = (document.getElementById('lbt-overall')?.classList.contains('active'));
+  if(isOverall){
+    if(!confirm('Reset ALL player win/loss/match records permanently?\n\nThis updates every player in the current session to 0 wins, 0 losses, 0 matches.\n\nThis cannot be undone.')) return;
+    S.players.forEach(p=>{ p.wins=0; p.losses=0; p.matches=0; p.lastMatchAt=-99; });
+    // Persist to DB for each player
+    const sb=getSupabase();
+    if(sb){
+      for(const p of S.players){
+        if(p.dbId){
+          await sb.from('players').update({wins:0,losses:0,matches:0}).eq('id',p.dbId).catch(()=>{});
+        }
+      }
+    }
+    toast('Overall records reset ✓');
+  } else {
+    if(!confirm('Clear this session\'s match log?\n\nThis removes all matches recorded this session. Player overall stats are NOT affected.')) return;
+    S.log=[];
+    toast('Session match log cleared ✓');
+  }
+  autoSave();
+  renderLeaderboard();
+}
+
+/* ── Sync everything (NEVER deletes from DB) ── */
 async function syncAll(){
   const sb=getSupabase();
   if(!sb){toast('⚠ Supabase not ready');return;}
   syncStatus('busy','Syncing…');
   await ensureSession();
+  // SAFETY RULE: Sync Now only ever INSERTs or UPDATEs players — it NEVER deletes.
+  // Player removal from the DB only happens via the ✕ Remove button (dbDeletePlayer),
+  // never automatically during a sync. This protects historical records.
   for(const p of S.players){ await dbSavePlayer(p); }
   syncStatus('ok',`Synced ${S.players.length} players · ${S.log.length} matches`);
   toast('All data synced to Supabase ✓');
