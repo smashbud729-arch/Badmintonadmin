@@ -1625,7 +1625,10 @@ async function loadFromDB(){
       }
     });
     syncStatus('ok',`Loaded ${players.length} player${players.length>1?'s':''} from DB`);
-    render();autoSave();
+    render();
+    // Always refresh payment after DB load — ensures only queued players show
+    renderPayment();
+    autoSave();
     toast(`Loaded ${players.length} players from Supabase ↓`);
   } else {
     syncStatus('ok','Database is empty — start adding players');
@@ -1671,6 +1674,7 @@ async function syncAll(){
   // never automatically during a sync. This protects historical records.
   for(const p of S.players){ await dbSavePlayer(p); }
   syncStatus('ok',`Synced ${S.players.length} players · ${S.log.length} matches`);
+  renderPayment(); // Refresh payment tab so only queued players show
   toast('All data synced to Supabase ✓');
 }
 
