@@ -1636,24 +1636,25 @@ async function loadFromDB(){
 /* ── Sync everything ── */
 /* ── Reset Leaderboard Records ── */
 async function resetLeaderboard(){
-  const isOverall = (document.getElementById('lbt-overall')?.classList.contains('active'));
+  const isOverall = (lbTab === 'overall');
   if(isOverall){
-    if(!confirm('Reset ALL player win/loss/match records permanently?\n\nThis updates every player in the current session to 0 wins, 0 losses, 0 matches.\n\nThis cannot be undone.')) return;
+    if(!confirm('Reset ALL player win/loss/match records permanently?\n\nThis sets every player to 0 wins, 0 losses, 0 matches.\n\nThis cannot be undone.')) return;
     S.players.forEach(p=>{ p.wins=0; p.losses=0; p.matches=0; p.lastMatchAt=-99; });
-    // Persist to DB for each player
+    // Update in Supabase
     const sb=getSupabase();
     if(sb){
       for(const p of S.players){
         if(p.dbId){
-          await sb.from('players').update({wins:0,losses:0,matches:0}).eq('id',p.dbId).catch(()=>{});
+          sb.from('players').update({wins:0,losses:0,matches:0}).eq('id',p.dbId)
+            .then(r=>{ if(r.error) console.error('Reset stat error:',r.error); });
         }
       }
     }
-    toast('Overall records reset ✓');
+    toast('✓ Overall records reset to zero');
   } else {
     if(!confirm('Clear this session\'s match log?\n\nThis removes all matches recorded this session. Player overall stats are NOT affected.')) return;
     S.log=[];
-    toast('Session match log cleared ✓');
+    toast('✓ Session match log cleared');
   }
   autoSave();
   renderLeaderboard();
