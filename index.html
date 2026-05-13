@@ -1322,7 +1322,7 @@ function startMatch(ci,sug){
     if(!s.length){toast('Not enough available players for '+court.courtMode);return}
     sug=s[0];
   }
-  [...sug.team1,...sug.team2].forEach(p=>{p.inQueue=false;p.onCourt=true;S.queue=S.queue.filter(x=>x!==p.id)});
+  [...sug.team1,...sug.team2].forEach(p=>{p.inQueue=false;p.onCourt=true;p.matches++;S.queue=S.queue.filter(x=>x!==p.id)});
   court.status='playing';
   court.match={team1:sug.team1,team2:sug.team2,score1:0,score2:0,mode:sug.mode};
   court.elapsed=0;
@@ -1335,8 +1335,8 @@ function endMatch(ci,winner){
   clearInterval(court.timer);
   const m=court.match,matchIdx=S.log.length;
   const winners=winner===1?m.team1:m.team2,losers=winner===1?m.team2:m.team1;
-  winners.forEach(p=>{p.wins++;p.matches++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
-  losers.forEach(p=>{p.losses++;p.matches++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
+  winners.forEach(p=>{p.wins++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
+  losers.forEach(p=>{p.losses++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
   const entry={
     time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
     mode:m.mode,court:court.id,duration:fmtTime(court.elapsed),
@@ -1357,7 +1357,7 @@ function endMatch(ci,winner){
 function cancelMatch(ci){
   const court=S.courts[ci];if(!court.match)return;
   clearInterval(court.timer);
-  [...court.match.team1,...court.match.team2].forEach(p=>{p.onCourt=false;p.inQueue=true;S.queue.push(p.id)});
+  [...court.match.team1,...court.match.team2].forEach(p=>{p.onCourt=false;p.inQueue=true;if(p.matches>0)p.matches--;S.queue.push(p.id)});
   court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
   toast('Match cancelled');render();autoSave();
 }
