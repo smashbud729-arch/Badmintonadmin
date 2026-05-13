@@ -541,46 +541,12 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
       </div>
       <div id="suggestions-wrap"></div>
       <div class="gdiv"></div>
-      <!-- ADVANCED MATCHMAKING -->
+      <!-- ADVANCED MATCHMAKING — 3 independent panels -->
       <div class="sh" style="margin-bottom:8px">
         <div class="st">⚙ Advanced Matchmaking</div>
-        <button class="btn btn-xs btn-o" onclick="toggleAdvMM()" id="adv-mm-toggle-btn">Show</button>
+        <span style="font-size:10px;color:var(--gr4)">3 independent panels</span>
       </div>
-      <div id="adv-mm-panel" style="display:none">
-        <div class="adv-mm-panel">
-          <div style="font-size:10px;color:var(--gr4);margin-bottom:8px">Manually pick players for a match — including those currently on court. The balance score updates live as you select.</div>
-          <!-- Pool filter -->
-          <div style="font-size:10px;color:var(--gr4);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.07em">Show players:</div>
-          <div class="adv-pool-toggle">
-            <button class="adv-pool-btn active" id="adv-pool-all" onclick="setAdvPool('all')">All</button>
-            <button class="adv-pool-btn" id="adv-pool-queue" onclick="setAdvPool('queue')">Queue only</button>
-            <button class="adv-pool-btn" id="adv-pool-court" onclick="setAdvPool('court')">On court only</button>
-          </div>
-          <!-- Player chips -->
-          <div style="font-size:10px;color:var(--gr4);margin-bottom:4px">
-            <span style="color:var(--male);font-weight:700">■</span> Team A &nbsp;
-            <span style="color:var(--pk);font-weight:700">■</span> Team B &nbsp;
-            <span style="color:#3DA06A;font-weight:700">■</span> On court
-          </div>
-          <div class="adv-player-grid" id="adv-player-grid"></div>
-          <!-- Mode + result -->
-          <div style="display:flex;align-items:center;gap:8px;margin:7px 0 8px;flex-wrap:wrap">
-            <span style="font-size:10px;color:var(--gr4)">Mode:</span>
-            <div id="adv-mode-toggle" class="mode-toggle">
-              <button class="mt-pill sel-d" data-mode="doubles" onclick="setAdvMode('doubles')">Doubles</button>
-              <button class="mt-pill"       data-mode="singles" onclick="setAdvMode('singles')">Singles</button>
-              <button class="mt-pill"       data-mode="mixed"   onclick="setAdvMode('mixed')">Mixed</button>
-            </div>
-            <button class="btn btn-xs btn-o" onclick="advSmartSuggest()" title="Auto-pick the most balanced teams from visible players">✦ Smart Pick</button>
-          </div>
-          <div id="adv-balance-result"></div>
-          <div class="court-assign-row"><span class="court-assign-lbl">Court:</span><div id="adv-court-pills"></div></div>
-          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-            <button class="btn btn-g btn-sm" id="adv-start-btn" onclick="startAdvMatch()" disabled>▶ Start Match</button>
-            <button class="btn btn-red btn-xs" onclick="clearAdvMM()">Clear</button>
-          </div>
-        </div>
-      </div>
+      <div id="adv-mm-panels-wrap"></div>
       <div class="gdiv"></div>
       <!-- MANUAL BUILDER -->
       <div class="sh"><div class="st">Manual Match Builder</div></div>
@@ -940,172 +906,252 @@ function removeFromQueue(pid_){
   toast(p.name+' removed from queue');render();autoSave();
 }
 
-/* ── Advanced Matchmaking State ── */
-const ADV={
-  pool:'all',       // 'all' | 'queue' | 'court'
-  mode:'doubles',
-  teamA:[],
-  teamB:[],
-  targetCourt:null
-};
+/* ══════════════════════════════════════════════════
+   ADVANCED MATCHMAKING — multi-instance (3 panels)
+   Each panel is fully independent: own pool, mode,
+   team selections, court pick, and balance display.
+   ══════════════════════════════════════════════════ */
 
-function toggleAdvMM(){
-  const panel=document.getElementById('adv-mm-panel');
-  const btn=document.getElementById('adv-mm-toggle-btn');
-  const open=panel.style.display==='none';
-  panel.style.display=open?'block':'none';
-  if(btn)btn.textContent=open?'Hide':'Show';
-  if(open)renderAdvMM();
+const ADV_COUNT = 3;
+
+// Factory: one state object per panel
+function makeAdvState(){
+  return { pool:'all', mode:'doubles', teamA:[], teamB:[], targetCourt:null };
+}
+const ADV_STATES = [makeAdvState(), makeAdvState(), makeAdvState()];
+// Track which panels are open (collapsed by default)
+const ADV_OPEN = [false, false, false];
+
+/* ── Bootstrap: inject the 3 panel shells into the DOM ── */
+function initAdvPanels(){
+  const wrap = document.getElementById('adv-mm-panels-wrap');
+  if(!wrap) return;
+  wrap.innerHTML = [0,1,2].map(n => `
+    <div style="margin-bottom:8px">
+      <div class="sh" style="margin-bottom:6px">
+        <div class="st" style="font-size:13px">Match ${n+1}</div>
+        <button class="btn btn-xs btn-o" id="adv-toggle-btn-${n}" onclick="toggleAdvPanel(${n})">Show</button>
+      </div>
+      <div id="adv-panel-${n}" style="display:none">
+        <div class="adv-mm-panel">
+          <div style="font-size:10px;color:var(--gr4);margin-bottom:8px">Pick players for Match ${n+1} — queue, on court, or both. Balance updates live.</div>
+          <div style="font-size:10px;color:var(--gr4);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.07em">Show players:</div>
+          <div class="adv-pool-toggle">
+            <button class="adv-pool-btn active" id="adv-pool-all-${n}"   onclick="setAdvPool(${n},'all')">All</button>
+            <button class="adv-pool-btn"        id="adv-pool-queue-${n}" onclick="setAdvPool(${n},'queue')">Queue only</button>
+            <button class="adv-pool-btn"        id="adv-pool-court-${n}" onclick="setAdvPool(${n},'court')">On court only</button>
+          </div>
+          <div style="font-size:10px;color:var(--gr4);margin-bottom:4px;margin-top:4px">
+            <span style="color:var(--male);font-weight:700">■</span> Team A &nbsp;
+            <span style="color:var(--pk);font-weight:700">■</span> Team B &nbsp;
+            <span style="color:#3DA06A;font-weight:700">■</span> On court
+          </div>
+          <div class="adv-player-grid" id="adv-grid-${n}"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin:7px 0 8px;flex-wrap:wrap">
+            <span style="font-size:10px;color:var(--gr4)">Mode:</span>
+            <div id="adv-mode-toggle-${n}" class="mode-toggle">
+              <button class="mt-pill sel-d" data-mode="doubles" onclick="setAdvMode(${n},'doubles')">Doubles</button>
+              <button class="mt-pill"       data-mode="singles" onclick="setAdvMode(${n},'singles')">Singles</button>
+              <button class="mt-pill"       data-mode="mixed"   onclick="setAdvMode(${n},'mixed')">Mixed</button>
+            </div>
+            <button class="btn btn-xs btn-o" onclick="advSmartSuggest(${n})" title="Auto-pick the most balanced teams from the visible pool">✦ Smart Pick</button>
+          </div>
+          <div id="adv-result-${n}"></div>
+          <div class="court-assign-row"><span class="court-assign-lbl">Court:</span><div id="adv-court-pills-${n}"></div></div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-g btn-sm" id="adv-start-btn-${n}" onclick="startAdvMatch(${n})" disabled>▶ Start Match</button>
+            <button class="btn btn-red btn-xs" onclick="clearAdvPanel(${n})">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${n<2?`<div class="gdiv" style="margin:6px 0"></div>`:''}
+  `).join('');
 }
 
-function setAdvPool(pool){
-  ADV.pool=pool;
-  document.querySelectorAll('.adv-pool-btn').forEach(b=>b.classList.toggle('active',b.id==='adv-pool-'+pool));
-  renderAdvMM();
+function toggleAdvPanel(n){
+  ADV_OPEN[n] = !ADV_OPEN[n];
+  const panel = document.getElementById('adv-panel-'+n);
+  const btn   = document.getElementById('adv-toggle-btn-'+n);
+  if(panel) panel.style.display = ADV_OPEN[n] ? 'block' : 'none';
+  if(btn)   btn.textContent     = ADV_OPEN[n] ? 'Hide'  : 'Show';
+  if(ADV_OPEN[n]) renderAdvPanel(n);
 }
 
-function setAdvMode(mode){
-  ADV.mode=mode;
-  document.querySelectorAll('#adv-mode-toggle .mt-pill').forEach(b=>{b.className='mt-pill'+(b.dataset.mode===mode?' sel-'+mode[0]:'')});
-  // Trim teams to valid size
-  const max=mode==='singles'?1:2;
-  ADV.teamA=ADV.teamA.slice(0,max);
-  ADV.teamB=ADV.teamB.slice(0,max);
-  renderAdvMM();
+function setAdvPool(n, pool){
+  ADV_STATES[n].pool = pool;
+  ['all','queue','court'].forEach(k=>{
+    const b = document.getElementById(`adv-pool-${k}-${n}`);
+    if(b) b.classList.toggle('active', k===pool);
+  });
+  renderAdvPanel(n);
 }
 
-function advPoolPlayers(){
-  if(ADV.pool==='queue') return S.players.filter(p=>p.inQueue&&!p.onCourt);
-  if(ADV.pool==='court') return S.players.filter(p=>p.onCourt);
+function setAdvMode(n, mode){
+  const st = ADV_STATES[n];
+  st.mode = mode;
+  document.querySelectorAll(`#adv-mode-toggle-${n} .mt-pill`).forEach(b=>{
+    b.className = 'mt-pill'+(b.dataset.mode===mode?' sel-'+mode[0]:'');
+  });
+  const max = mode==='singles'?1:2;
+  st.teamA = st.teamA.slice(0,max);
+  st.teamB = st.teamB.slice(0,max);
+  renderAdvPanel(n);
+}
+
+function advPoolPlayers(n){
+  const pool = ADV_STATES[n].pool;
+  if(pool==='queue') return S.players.filter(p=>p.inQueue&&!p.onCourt);
+  if(pool==='court') return S.players.filter(p=>p.onCourt);
   return S.players.filter(p=>p.inQueue||p.onCourt);
 }
 
-function advTogglePlayer(pid_){
-  const p=pid(pid_);if(!p)return;
-  const max=ADV.mode==='singles'?1:2;
-  // If already in a team, remove
-  if(ADV.teamA.some(x=>x.id===pid_)){ADV.teamA=ADV.teamA.filter(x=>x.id!==pid_);renderAdvMM();return}
-  if(ADV.teamB.some(x=>x.id===pid_)){ADV.teamB=ADV.teamB.filter(x=>x.id!==pid_);renderAdvMM();return}
-  // Add to team A first, then B
-  if(ADV.teamA.length<max){ADV.teamA.push(p);}
-  else if(ADV.teamB.length<max){ADV.teamB.push(p);}
-  else{toast('Teams full — remove a player first');return}
-  renderAdvMM();
+/* Check if a player is selected in ANY OTHER panel (for warning only — not a hard block) */
+function advSelectedElsewhere(n, pid_){
+  for(let i=0;i<ADV_COUNT;i++){
+    if(i===n) continue;
+    const st=ADV_STATES[i];
+    if(st.teamA.some(x=>x.id===pid_)||st.teamB.some(x=>x.id===pid_)) return true;
+  }
+  return false;
 }
 
-function clearAdvMM(){
-  ADV.teamA=[];ADV.teamB=[];ADV.targetCourt=null;
-  renderAdvMM();
+function advTogglePlayer(n, pid_){
+  const p   = pid(pid_); if(!p) return;
+  const st  = ADV_STATES[n];
+  const max = st.mode==='singles'?1:2;
+  if(st.teamA.some(x=>x.id===pid_)){st.teamA=st.teamA.filter(x=>x.id!==pid_);renderAdvPanel(n);return}
+  if(st.teamB.some(x=>x.id===pid_)){st.teamB=st.teamB.filter(x=>x.id!==pid_);renderAdvPanel(n);return}
+  if(advSelectedElsewhere(n,pid_)){
+    // Soft warning — still allow; coordinator may intentionally assign the same player
+    toast(`⚠ ${p.name} is also picked in another panel`);
+  }
+  if(st.teamA.length<max)       st.teamA.push(p);
+  else if(st.teamB.length<max)  st.teamB.push(p);
+  else { toast('Teams full — remove a player first'); return; }
+  renderAdvPanel(n);
 }
 
-/* Smart pick: from the visible pool, find the most balanced pairing */
-function advSmartSuggest(){
-  const pool=advPoolPlayers();
-  const needed=ADV.mode==='singles'?2:4;
-  if(pool.length<needed){toast('Not enough players in the selected pool');return}
-  // Reuse genMatches logic but over the pool directly
-  const sorted=[...pool].sort((a,b)=>fairScore(b)-fairScore(a));
-  let best={score:-Infinity,team1:null,team2:null};
-  if(ADV.mode==='singles'){
+function clearAdvPanel(n){
+  ADV_STATES[n].teamA=[];
+  ADV_STATES[n].teamB=[];
+  ADV_STATES[n].targetCourt=null;
+  renderAdvPanel(n);
+}
+
+/* Smart pick for panel n */
+function advSmartSuggest(n){
+  const st   = ADV_STATES[n];
+  const pool = advPoolPlayers(n);
+  const needed = st.mode==='singles'?2:4;
+  if(pool.length<needed){ toast('Not enough players in the selected pool'); return; }
+  const sorted = [...pool].sort((a,b)=>fairScore(b)-fairScore(a));
+  let best = {score:-Infinity, team1:null, team2:null};
+  if(st.mode==='singles'){
     for(let i=0;i<sorted.length-1;i++){
       for(let j=i+1;j<sorted.length;j++){
-        const d=Math.abs(balScore(sorted[i])-balScore(sorted[j]));
-        const sc=100-d;
-        if(sc>best.score){best={score:sc,team1:[sorted[i]],team2:[sorted[j]]};}
+        const sc = 100-Math.abs(balScore(sorted[i])-balScore(sorted[j]));
+        if(sc>best.score) best={score:sc,team1:[sorted[i]],team2:[sorted[j]]};
       }
     }
   } else {
-    for(let i=0;i<sorted.length&&best.score<0;i++){
+    outer:
+    for(let i=0;i<sorted.length;i++){
       for(let j=i+1;j<sorted.length;j++){
         for(let k=j+1;k<sorted.length;k++){
           for(let l=k+1;l<sorted.length;l++){
-            const[p1,p2,p3,p4]=[sorted[i],sorted[j],sorted[k],sorted[l]];
+            const [p1,p2,p3,p4]=[sorted[i],sorted[j],sorted[k],sorted[l]];
             const pairs=[{t1:[p1,p2],t2:[p3,p4]},{t1:[p1,p3],t2:[p2,p4]},{t1:[p1,p4],t2:[p2,p3]}];
             for(const pair of pairs){
-              if(ADV.mode==='mixed'){
+              if(st.mode==='mixed'){
                 if(!(pair.t1.some(x=>x.gender==='M')&&pair.t1.some(x=>x.gender==='F')))continue;
                 if(!(pair.t2.some(x=>x.gender==='M')&&pair.t2.some(x=>x.gender==='F')))continue;
               }
               const bs1=(balScore(pair.t1[0])+balScore(pair.t1[1]))/2;
               const bs2=(balScore(pair.t2[0])+balScore(pair.t2[1]))/2;
-              const skillDiff=Math.abs(bs1-bs2);
-              const sc=100-Math.min(skillDiff/50*50,48)-genderPenalty(pair.t1,pair.t2)*8;
-              if(sc>best.score){best={score:sc,team1:pair.t1,team2:pair.t2};}
+              const sc=100-Math.min(Math.abs(bs1-bs2)/50*50,48)-genderPenalty(pair.t1,pair.t2)*8;
+              if(sc>best.score){ best={score:sc,team1:pair.t1,team2:pair.t2}; }
             }
+            if(best.score>90) break outer; // good enough — stop early
           }
         }
       }
     }
   }
-  if(!best.team1){toast('Could not find a valid match — try a different mode or pool');return}
-  ADV.teamA=best.team1;
-  ADV.teamB=best.team2;
-  toast('✦ Smart pick done — review teams below');
-  renderAdvMM();
+  if(!best.team1){ toast('Could not find a valid match — try a different mode or pool'); return; }
+  st.teamA = best.team1;
+  st.teamB = best.team2;
+  toast(`✦ Smart pick done for Match ${n+1}`);
+  renderAdvPanel(n);
 }
 
-function setAdvCourt(ci){
-  ADV.targetCourt=ADV.targetCourt===ci?null:ci;
-  renderAdvMM();
+function setAdvCourt(n, ci){
+  ADV_STATES[n].targetCourt = ADV_STATES[n].targetCourt===ci ? null : ci;
+  renderAdvPanel(n);
 }
 
-function startAdvMatch(){
-  const needed=ADV.mode==='singles'?1:2;
-  if(ADV.teamA.length!==needed||ADV.teamB.length!==needed){toast('Fill both teams first');return}
-  if(ADV.targetCourt===null){toast('Select a court first');return}
-  if(S.courts[ADV.targetCourt].status==='playing'){toast('That court is busy');return}
-  startMatch(ADV.targetCourt,{team1:ADV.teamA,team2:ADV.teamB,mode:ADV.mode,balance:100});
-  clearAdvMM();
+function startAdvMatch(n){
+  const st     = ADV_STATES[n];
+  const needed = st.mode==='singles'?1:2;
+  if(st.teamA.length!==needed||st.teamB.length!==needed){ toast('Fill both teams first'); return; }
+  if(st.targetCourt===null){ toast('Select a court first'); return; }
+  if(S.courts[st.targetCourt].status==='playing'){ toast('That court is busy'); return; }
+  startMatch(st.targetCourt,{team1:st.teamA,team2:st.teamB,mode:st.mode,balance:100});
+  clearAdvPanel(n);
   showView('courts');
-  toast('Match started on Court '+(ADV.targetCourt+1)+' ▶');
+  toast('Match '+( n+1)+' started on Court '+(st.targetCourt+1)+' ▶');
   autoSave();
 }
 
-function renderAdvMM(){
-  const grid=document.getElementById('adv-player-grid');
-  const res=document.getElementById('adv-balance-result');
-  const cp=document.getElementById('adv-court-pills');
-  const startBtn=document.getElementById('adv-start-btn');
-  if(!grid)return;
+function renderAdvPanel(n){
+  if(!ADV_OPEN[n]) return; // don't render collapsed panels
+  const st      = ADV_STATES[n];
+  const grid    = document.getElementById('adv-grid-'+n);
+  const res     = document.getElementById('adv-result-'+n);
+  const cp      = document.getElementById('adv-court-pills-'+n);
+  const startBtn= document.getElementById('adv-start-btn-'+n);
+  if(!grid) return;
 
-  const pool=advPoolPlayers();
+  // Player chips
+  const pool = advPoolPlayers(n);
   if(!pool.length){
     grid.innerHTML=`<span style="font-size:11px;color:var(--gr4);font-style:italic">No players in this pool</span>`;
   } else {
-    grid.innerHTML=pool.map(p=>{
-      const inA=ADV.teamA.some(x=>x.id===p.id);
-      const inB=ADV.teamB.some(x=>x.id===p.id);
-      const courtClass=p.onCourt?' on-court':'';
-      const selClass=inA?' sel-a':inB?' sel-b':'';
-      const courtTag=p.onCourt?` <span style="font-size:8px;color:#3DA06A;font-weight:700">▶COURT</span>`:'';
-      const streak=getWinStreak(p);
-      const streakTag=streak>=3?` 🔥${streak}`:'';
-      return `<div class="adv-p-chip${courtClass}${selClass}" onclick="advTogglePlayer(${p.id})" title="${p.name} · ${SKILL_N[p.skill]} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR">
+    grid.innerHTML = pool.map(p=>{
+      const inA   = st.teamA.some(x=>x.id===p.id);
+      const inB   = st.teamB.some(x=>x.id===p.id);
+      const elsewhere = !inA&&!inB&&advSelectedElsewhere(n,p.id);
+      const courtClass= p.onCourt?' on-court':'';
+      const selClass  = inA?' sel-a':inB?' sel-b':'';
+      const courtTag  = p.onCourt?` <span style="font-size:8px;color:#3DA06A;font-weight:700">▶CT</span>`:'';
+      const elseTag   = elsewhere?` <span style="font-size:8px;color:#E8A04C;font-weight:700" title="Already in another panel">★</span>`:'';
+      const streak    = getWinStreak(p);
+      const streakTag = streak>=3?` 🔥${streak}`:'';
+      return `<div class="adv-p-chip${courtClass}${selClass}" onclick="advTogglePlayer(${n},${p.id})" title="${p.name} · ${SKILL_N[p.skill]} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR${elsewhere?' · ⚠ in another panel':''}">
         <span class="pg ${p.gender==='F'?'pg-f':'pg-m'}" style="width:13px;height:13px;font-size:7px">${p.gender}</span>
-        <span>${p.name}${courtTag}${streakTag}</span>
+        <span>${p.name}${courtTag}${elseTag}${streakTag}</span>
         <span style="font-size:9px;opacity:0.7">${SKILL_N[p.skill][0]}${p.skill}</span>
       </div>`;
     }).join('');
   }
 
   // Balance result
-  const needed=ADV.mode==='singles'?1:2;
-  const full=ADV.teamA.length===needed&&ADV.teamB.length===needed;
+  const needed = st.mode==='singles'?1:2;
+  const full   = st.teamA.length===needed && st.teamB.length===needed;
   if(full){
-    const bs1=ADV.teamA.length===1?balScore(ADV.teamA[0]):(balScore(ADV.teamA[0])+balScore(ADV.teamA[1]))/2;
-    const bs2=ADV.teamB.length===1?balScore(ADV.teamB[0]):(balScore(ADV.teamB[0])+balScore(ADV.teamB[1]))/2;
-    const diff=Math.abs(bs1-bs2);
-    const bal=Math.round(100-Math.min(diff/50*50,48));
-    const gPen=ADV.teamA.length>1?genderPenalty(ADV.teamA,ADV.teamB):0;
-    const avgWrA=Math.round(ADV.teamA.reduce((s,p)=>s+wr(p),0)/ADV.teamA.length);
-    const avgWrB=Math.round(ADV.teamB.reduce((s,p)=>s+wr(p),0)/ADV.teamB.length);
-    const avgSkA=Math.round(ADV.teamA.reduce((s,p)=>s+p.skill,0)/ADV.teamA.length*10)/10;
-    const avgSkB=Math.round(ADV.teamB.reduce((s,p)=>s+p.skill,0)/ADV.teamB.length*10)/10;
+    const bs1  = st.teamA.length===1?balScore(st.teamA[0]):(balScore(st.teamA[0])+balScore(st.teamA[1]))/2;
+    const bs2  = st.teamB.length===1?balScore(st.teamB[0]):(balScore(st.teamB[0])+balScore(st.teamB[1]))/2;
+    const bal  = Math.round(100-Math.min(Math.abs(bs1-bs2)/50*50,48));
+    const gPen = st.teamA.length>1?genderPenalty(st.teamA,st.teamB):0;
+    const avgWrA=Math.round(st.teamA.reduce((s,p)=>s+wr(p),0)/st.teamA.length);
+    const avgWrB=Math.round(st.teamB.reduce((s,p)=>s+wr(p),0)/st.teamB.length);
+    const avgSkA=Math.round(st.teamA.reduce((s,p)=>s+p.skill,0)/st.teamA.length*10)/10;
+    const avgSkB=Math.round(st.teamB.reduce((s,p)=>s+p.skill,0)/st.teamB.length*10)/10;
     res.innerHTML=`<div class="adv-result">
       <div class="match-grid" style="margin-bottom:4px">
-        <div class="tc ta" style="font-size:11px">${ADV.teamA.map(p=>`<div style="font-weight:600;text-align:right">${p.name}</div>`).join('')}</div>
+        <div class="tc ta" style="font-size:11px">${st.teamA.map(p=>`<div style="font-weight:600;text-align:right">${p.name}</div>`).join('')}</div>
         <div class="vs" style="font-size:13px">VS</div>
-        <div class="tc tb" style="font-size:11px">${ADV.teamB.map(p=>`<div style="font-weight:600">${p.name}</div>`).join('')}</div>
+        <div class="tc tb" style="font-size:11px">${st.teamB.map(p=>`<div style="font-weight:600">${p.name}</div>`).join('')}</div>
       </div>
       <div class="bal-bar"><div class="bal-fill" style="width:${bal}%"></div></div>
       <div class="adv-bal-row">
@@ -1116,8 +1162,8 @@ function renderAdvMM(){
       </div>
     </div>`;
   } else {
-    const tnA=ADV.teamA.map(p=>p.name).join(', ')||'—';
-    const tnB=ADV.teamB.map(p=>p.name).join(', ')||'—';
+    const tnA=st.teamA.map(p=>p.name).join(', ')||'—';
+    const tnB=st.teamB.map(p=>p.name).join(', ')||'—';
     res.innerHTML=`<div style="font-size:11px;color:var(--gr4);margin-bottom:8px;padding:7px;background:var(--b3);border-radius:5px">
       <span style="color:var(--male);font-weight:700">A:</span> ${tnA} &nbsp;|&nbsp; <span style="color:var(--pk);font-weight:700">B:</span> ${tnB}
       <span style="margin-left:6px;opacity:0.6">(need ${needed} per team)</span>
@@ -1125,9 +1171,9 @@ function renderAdvMM(){
   }
 
   // Court pills
-  if(cp)cp.innerHTML=S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" style="${ADV.targetCourt===ci?'border-color:var(--pk);color:var(--pk);background:var(--pkg)':''}" onclick="${c.status==='idle'?`setAdvCourt(${ci})`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('');
+  if(cp) cp.innerHTML=S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" style="${st.targetCourt===ci?'border-color:var(--pk);color:var(--pk);background:var(--pkg)':''}" onclick="${c.status==='idle'?`setAdvCourt(${n},${ci})`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('');
 
-  if(startBtn)startBtn.disabled=!(full&&ADV.targetCourt!==null&&S.courts[ADV.targetCourt]?.status==='idle');
+  if(startBtn) startBtn.disabled=!(full&&st.targetCourt!==null&&S.courts[st.targetCourt]?.status==='idle');
 }
 
 // FAIR score: penalises players who just played so they go to back of priority
@@ -1713,8 +1759,8 @@ function render(){
   document.getElementById('h-courts').textContent=S.courts.length;
   document.getElementById('h-matches').textContent=S.log.length;
   renderCourts();renderQueueList();renderSuggestions();updateBuilderUI();
-  const advPanel=document.getElementById('adv-mm-panel');
-  if(advPanel&&advPanel.style.display!=='none')renderAdvMM();
+  const advPanel=document.getElementById('adv-mm-panels-wrap');
+  if(advPanel) for(let i=0;i<ADV_COUNT;i++) if(ADV_OPEN[i]) renderAdvPanel(i);
 
   renderAllPlayers();
 
@@ -2071,6 +2117,7 @@ document.getElementById('mgr-date-inp').value=new Date().toISOString().slice(0,1
 loadTheme();
 const _restored=restoreSession();
 if(!_restored) initCourts(3);
+initAdvPanels(); // inject the 3 advanced matchmaking panel shells
 render();
 initSupabase();
 if(_restored) toast('Session restored ✓ — welcome back!');
