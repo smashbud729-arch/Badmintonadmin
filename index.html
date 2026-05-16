@@ -2473,7 +2473,7 @@ function showMatchRecap(entry,courtId,elapsed){
   document.getElementById('recap-score').textContent=entry.s1+' : '+entry.s2;
   document.getElementById('recap-winner').textContent='🏆 '+entry.winner+' wins!';
   // Fun stat
-  const funStats=['Great game by all! 🏸','Rally hard, win harder!','Smash it! 🚀','That's the spirit!','Rackets up! 🎉'];
+  const funStats=['Great game by all! 🏸','Rally hard, win harder!','Smash it! 🚀','That\'s the spirit!','Rackets up! 🎉'];
   // Check for upset
   const winTeam=entry.winner.split(' & ').map(n=>S.players.find(p=>p.name===n)).filter(Boolean);
   const loseTeam=(entry.winner===entry.t1?entry.t2:entry.t1).split(' & ').map(n=>S.players.find(p=>p.name===n)).filter(Boolean);
