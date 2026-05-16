@@ -818,10 +818,14 @@ let S={
   builder:{teamA:[],teamB:[],mode:'doubles',targetCourt:null},
   manager:{name:'',date:'',venue:''},
   pay:{},
-  queueSort:'fairness', // fairness | alpha | matches | winpct | skill
-  editingSkill:null,    // player id currently having skill edited
-  editingName:null      // player id currently having name edited
+  queueSort:'fairness',  // fairness | alpha | matches | winpct | skill
+  editingSkill:null,     // player id currently having skill edited
+  editingName:null,      // player id currently having name edited
+  announcement:'',       // session announcement text
+  courtNicknames:{},     // court index -> custom name
+  soundOn:true           // sound effects enabled
 };
+const overtimeAlerted=new Set(); // courts already alerted for overtime this match
 
 /* ── Session Persistence (survives page refresh) ── */
 const LS_KEY = 'smashhub_session_v1';
@@ -2378,13 +2382,6 @@ async function initSupabase(){
 /* ════════════════════════════════════════════════════
    QoL FEATURES — Phase 2
    ════════════════════════════════════════════════════ */
-
-/* ── State extensions ── */
-if(!S.announcement) S.announcement='';
-if(!S.courtNicknames) S.courtNicknames={};
-if(!S.courtTimeLimit) S.courtTimeLimit=30; // minutes
-if(!S.soundOn) S.soundOn=true;
-const overtimeAlerted=new Set(); // courts already alerted this match
 
 /* ── 1. CONFETTI ── */
 function launchConfetti(){
