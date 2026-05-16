@@ -256,6 +256,17 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   .sync-bar .btn-xs{padding:2px 5px;font-size:9px}
 }
 
+/* Players tab — mobile specific */
+@media(max-width:600px){
+  /* Add player form: single column */
+  #view-players .form-row{grid-template-columns:1fr}
+  #view-players .two-col{grid-template-columns:1fr}
+  /* Player item: allow wrapping */
+  .pl-item{overflow:visible;flex-wrap:wrap}
+  /* Action button row fills width */
+  .pl-item>div:last-of-type{width:100%}
+}
+
 /* Section hdr */
 .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
 .st{font-size:11px;font-weight:700;color:var(--pk);text-transform:uppercase;letter-spacing:0.1em}
@@ -1590,26 +1601,33 @@ function saveSkill(pid_,val){
 function renderAllPlayers(){
   const ap=document.getElementById('all-players');if(!ap)return;
   document.getElementById('pl-total').textContent=S.players.length;
-  // Always display alphabetically for easy navigation
   const sorted=[...S.players].sort((a,b)=>a.name.localeCompare(b.name));
   ap.innerHTML=sorted.length?sorted.map(p=>`
     <div>
-      <div class="pl-item">
-        ${avHtml(p)}
-        <div style="flex:1;min-width:0">
-          <div class="pl-name">${p.name}</div>
-          <div class="pl-meta">${p.gender==='F'?'Female':'Male'} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR · ${MODE_LBL[p.mode]||p.mode}</div>
+      <div class="pl-item" style="flex-direction:column;align-items:stretch;gap:6px">
+        <!-- Row 1: avatar + name + skill badge -->
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          ${avHtml(p)}
+          <div style="flex:1;min-width:0">
+            <div class="pl-name" style="white-space:normal;word-break:break-word">${p.name}</div>
+            <div class="pl-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${p.gender==='F'?'♀':'♂'} · ${p.wins}W ${p.losses}L · ${wr(p)}% · ${SKILL_N[p.skill]}
+            </div>
+          </div>
+          <div class="sk ${SKILL_C[p.skill]}" style="flex-shrink:0">${SKILL_N[p.skill]}</div>
         </div>
-        <div class="sk ${SKILL_C[p.skill]}">${SKILL_N[p.skill]}</div>
-        <button class="btn btn-xs btn-o" onclick="toggleEditName(${p.id})" style="margin-left:4px" title="Edit name">✎ Name</button>
-        <button class="btn btn-xs btn-o" onclick="toggleEditSkill(${p.id})" style="margin-left:4px" title="Edit skill level">✎ Skill</button>
-        <button class="btn btn-sm ${p.onCourt?'btn-blue':p.inQueue?'btn-red':'btn-o'}"
-          onclick="toggleQueue(${p.id})"
-          ${p.onCourt?'disabled':''}
-          style="min-width:58px;margin-left:4px">
-          ${p.onCourt?'On Court':p.inQueue?'Dequeue':'+ Queue'}
-        </button>
-        <button class="btn btn-red btn-xs" onclick="removePlayer(${p.id})" ${p.onCourt?'disabled':''} style="margin-left:4px">✕</button>
+        <!-- Row 2: action buttons -->
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-xs btn-o" onclick="toggleEditName(${p.id})" title="Edit name" style="flex:1;min-width:60px">✎ Name</button>
+          <button class="btn btn-xs btn-o" onclick="toggleEditSkill(${p.id})" title="Edit skill" style="flex:1;min-width:60px">✎ Skill</button>
+          <button class="btn btn-sm ${p.onCourt?'btn-blue':p.inQueue?'btn-red':'btn-o'}"
+            onclick="toggleQueue(${p.id})"
+            ${p.onCourt?'disabled':''}
+            style="flex:2;min-width:80px">
+            ${p.onCourt?'🏟 On Court':p.inQueue?'− Dequeue':'+ Queue'}
+          </button>
+          <button class="btn btn-red btn-xs" onclick="removePlayer(${p.id})" ${p.onCourt?'disabled':''} style="flex-shrink:0">✕</button>
+        </div>
       </div>
       ${S.editingName===p.id?`<div class="edit-name-row">
         <label>Name:</label>
