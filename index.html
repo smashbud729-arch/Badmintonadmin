@@ -432,6 +432,48 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 [data-theme="gold"] .nt:hover:not(.active){background:#1A1A1A}
 [data-theme="gold"] .corner-img{filter:drop-shadow(0 1px 4px rgba(201,162,39,0.35))}
 [data-theme="gold"] .header-mascot-img{filter:drop-shadow(0 1px 3px rgba(201,162,39,0.3))}
+/* ── New QoL Features CSS ── */
+/* Form dots */
+.form-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:2px;flex-shrink:0}
+.form-dot-w{background:#3DA06A}.form-dot-l{background:var(--pk)}.form-dot-n{background:var(--gr3)}
+/* Match recap modal */
+.recap-modal{background:var(--b2);border:2px solid var(--pkl);border-radius:14px;padding:24px;width:400px;max-width:95vw;text-align:center;box-shadow:0 8px 40px rgba(232,83,122,0.2)}
+.recap-score{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--pk);letter-spacing:0.06em;line-height:1}
+.recap-stat{font-size:11px;color:var(--gr4);margin-top:2px}
+/* Confetti canvas */
+#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}
+/* Court timer alert */
+.court-card.overtime{border-color:#FF6B35;box-shadow:0 0 12px rgba(255,107,53,0.3);animation:overtime-pulse 1.5s ease-in-out infinite}
+@keyframes overtime-pulse{0%,100%{border-color:#FF6B35}50%{border-color:#FF9E74}}
+.timer-big.overtime{color:#FF6B35}
+/* QR code panel */
+.qr-panel{background:var(--b2);border:1.5px solid var(--pkl);border-radius:10px;padding:14px;text-align:center;margin-bottom:12px}
+/* Announcement banner */
+.announcement-bar{background:linear-gradient(135deg,var(--pkd),var(--pk));color:#fff;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.announcement-bar:empty,.announcement-bar.hidden{display:none}
+.announcement-input{background:var(--b3);border:1.5px solid var(--pkl);border-radius:6px;color:var(--w);padding:6px 10px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;width:100%;margin-top:6px}
+.announcement-input:focus{border-color:var(--pk)}
+/* Lucky draw animation */
+@keyframes lucky-spin{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+.lucky-flash{animation:lucky-spin 0.3s ease}
+/* Player of the day */
+.potd-banner{background:linear-gradient(135deg,var(--pkd) 0%,var(--pk) 50%,#4A7C59 100%);border-radius:10px;padding:14px;color:#fff;text-align:center;margin-bottom:12px;position:relative;overflow:hidden}
+.potd-name{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:0.1em}
+/* Court nickname */
+.court-nick-inp{background:transparent;border:none;border-bottom:1px solid var(--pkl);color:var(--pk);font-family:'Bebas Neue',sans-serif;font-size:18px;width:120px;outline:none;text-align:center;cursor:text;letter-spacing:0.06em}
+.court-nick-inp:focus{border-bottom-color:var(--pk);background:var(--b3);border-radius:4px 4px 0 0}
+/* Sound toggle */
+.sound-btn{padding:3px 8px;border-radius:4px;border:1px solid var(--gr2);background:var(--b2);color:var(--gr4);cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.sound-btn.on{background:var(--pkg);border-color:var(--pkl);color:var(--pk)}
+/* WhatsApp share */
+.wa-btn{background:#25D366;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;transition:all 0.15s}
+.wa-btn:hover{background:#128C7E}
+/* Biggest upset badge */
+.upset-badge{font-size:9px;background:#FFF4E0;color:#C06020;border:1px solid #F0C06055;border-radius:3px;padding:1px 5px;font-weight:700}
+[data-theme="dark"] .upset-badge{background:#2A1800;color:#F0C060;border-color:#5A4000}
+/* Rivalry tracker */
+.rivalry-chip{background:var(--b3);border:1px solid var(--pkl);border-radius:6px;padding:7px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:11px}
+
 </style>
 </head>
 <body>
@@ -478,6 +520,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
     <button class="btn btn-o btn-xs" onclick="syncAll()" title="Force sync everything to database">↑ Sync Now</button>
     <button class="btn btn-o btn-xs" onclick="loadFromDB()" title="Reload data from database">↓ Load DB</button>
     <button class="btn btn-xs" style="background:#FFE8EE;color:var(--pkd);border:1px solid var(--pkl)" onclick="if(confirm('Clear session data and start fresh?')){clearSession();location.reload()}" title="Clear saved session and refresh">✕ New Session</button>
+    <button id="sound-btn" class="sound-btn on" onclick="toggleSound()" title="Toggle sound effects">🔔</button>
+    <button class="btn btn-xs btn-o" onclick="openLuckyDraw()" title="Random fair team picker">🎲 Lucky</button>
+    <button class="btn btn-xs btn-o" onclick="showAnnouncementEdit()" title="Post a message to all players">📢</button>
+    <button class="btn btn-xs btn-o" onclick="showQR()" title="Show QR code for this session URL">📱 QR</button>
+    <button class="wa-btn" onclick="shareWhatsApp()" title="Share leaderboard via WhatsApp" style="padding:3px 8px;font-size:11px">💬</button>
   </div>
 </div>
 
@@ -504,6 +551,12 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div class="nt" onclick="showView('leaderboard')">Leaderboard</div>
 </div>
 
+
+<!-- Announcement bar -->
+<div class="announcement-bar hidden" id="announcement-bar" onclick="showAnnouncementEdit()">
+  <span>📢</span><span id="announcement-text"></span>
+  <button onclick="event.stopPropagation();clearAnnouncement()" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px">✕</button>
+</div>
 <div class="toast-bar"><span class="toast-msg" id="toast"></span></div>
 
 <div class="main">
@@ -608,7 +661,10 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
         </div>
         <button class="btn btn-g" style="width:100%;margin-top:4px" onclick="addPlayer()">+ Add to Session</button>
       </div>
-      <div class="sh"><div class="st">All Players</div><span class="chip" id="pl-total">0</span></div>
+      <div class="sh"><div class="st">All Players</div><span class="chip" id="pl-total">0</span>
+        <button class="btn btn-xs btn-o" onclick="queueAll()" title="Add all players to queue">+ All</button>
+        <button class="btn btn-xs btn-red" onclick="dequeueAll()" title="Remove all from queue">− All</button>
+      </div>
       <div class="slist" id="all-players"></div>
     </div>
     <div>
@@ -684,6 +740,70 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 </div>
 
 </div>
+</div>
+
+<!-- Confetti canvas -->
+<canvas id="confetti-canvas" style="display:none"></canvas>
+
+<!-- Match Recap Modal -->
+<div class="backdrop" id="recap-modal-backdrop">
+  <div class="recap-modal">
+    <div style="font-size:11px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px" id="recap-court">Court 1</div>
+    <div style="font-size:13px;font-weight:700;color:var(--pk);margin-bottom:2px" id="recap-teams"></div>
+    <div class="recap-score" id="recap-score">0 : 0</div>
+    <div style="font-size:14px;font-weight:700;color:var(--gr4);margin:4px 0 8px" id="recap-winner"></div>
+    <div style="display:flex;justify-content:center;gap:16px;margin:10px 0 14px" id="recap-stats"></div>
+    <div id="recap-fun-stat" style="font-size:11px;color:var(--gr4);background:var(--b3);border-radius:6px;padding:6px 12px;margin-bottom:14px"></div>
+    <button class="btn btn-g" onclick="closeRecapModal()" style="width:100%">👍 Nice Game!</button>
+  </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="backdrop" id="qr-modal-backdrop">
+  <div class="modal">
+    <div class="modal-ttl">📱 Share Session</div>
+    <div style="text-align:center;padding:10px 0">
+      <div id="qr-code-img" style="margin:0 auto 12px;width:200px;height:200px;background:var(--b3);border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid var(--gr2)"></div>
+      <div style="font-size:11px;color:var(--gr4);margin-bottom:10px" id="qr-url-label"></div>
+      <button class="btn btn-g" onclick="document.getElementById('qr-modal-backdrop').classList.remove('open')" style="width:100%">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lucky Draw Modal -->
+<div class="backdrop" id="lucky-modal-backdrop">
+  <div class="modal" style="text-align:center">
+    <div class="modal-ttl">🎲 Lucky Draw</div>
+    <div style="font-size:11px;color:var(--gr4);margin-bottom:14px">Randomly picks the next match fairly from the queue</div>
+    <div id="lucky-result" style="min-height:60px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-g" onclick="luckyDraw()" style="flex:1">🎲 Draw Again</button>
+      <button class="btn btn-o" onclick="document.getElementById('lucky-modal-backdrop').classList.remove('open')" style="flex:1">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Court Timer Alert Modal -->
+<div class="backdrop" id="timer-alert-backdrop">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:40px;margin-bottom:8px">⏰</div>
+    <div class="modal-ttl" id="timer-alert-title">Time's Up!</div>
+    <div style="font-size:13px;color:var(--gr4);margin-bottom:16px" id="timer-alert-body"></div>
+    <button class="btn btn-g" onclick="document.getElementById('timer-alert-backdrop').classList.remove('open')" style="width:100%">Got it</button>
+  </div>
+</div>
+
+<!-- Announcement Edit Modal -->
+<div class="backdrop" id="ann-modal-backdrop">
+  <div class="modal">
+    <div class="modal-ttl">📢 Session Announcement</div>
+    <div style="font-size:11px;color:var(--gr4);margin-bottom:8px">This message shows at the top of the app for everyone.</div>
+    <input class="announcement-input" id="ann-input" placeholder="e.g. Courts closing at 10pm · Bring your own shuttlecocks" maxlength="120"/>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-g" onclick="saveAnnouncement()" style="flex:1">Post</button>
+      <button class="btn btn-o" onclick="document.getElementById('ann-modal-backdrop').classList.remove('open')" style="flex:1">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -876,7 +996,15 @@ function saveName(pid_, val){
 }
 
 // Auto-save after any state-changing action
-function autoSave(){ saveSession(); }
+function autoSave(){
+  saveSession();
+  // Also persist new state fields (announcement, nicknames, sound)
+  try{localStorage.setItem('smashhub_extra',JSON.stringify({
+    announcement:S.announcement||'',
+    courtNicknames:S.courtNicknames||{},
+    soundOn:S.soundOn!==false
+  }));}catch(e){}
+}
 
 /* ── Core helpers ── */
 function pid(id){return S.players.find(p=>p.id===id)}
@@ -894,6 +1022,58 @@ function getWinStreak(p){
     else break; // loss ends streak (log is newest-first)
   }
   return streak;
+}
+
+/* Queue history: how many times this player has been queued this session */
+function getQueueCount(p){ return p.queueCount||0; }
+
+/* Head-to-head record between two players from session log */
+function getHeadToHead(p1,p2){
+  let p1wins=0,p2wins=0,together=0;
+  S.log.forEach(e=>{
+    const t1n=e.t1.split(' & '),t2n=e.t2.split(' & '),wn=e.winner.split(' & ');
+    const p1T1=t1n.includes(p1.name),p1T2=t2n.includes(p1.name);
+    const p2T1=t1n.includes(p2.name),p2T2=t2n.includes(p2.name);
+    if((p1T1&&p2T2)||(p1T2&&p2T1)){
+      together++;
+      if(wn.includes(p1.name))p1wins++;else p2wins++;
+    }
+  });
+  return{p1wins,p2wins,together};
+}
+
+/* Most improved: player whose win rate grew the most this session */
+function getMostImproved(){
+  const sessionNames=new Set();
+  S.log.forEach(e=>[...e.t1.split(' & '),...e.t2.split(' & ')].forEach(n=>sessionNames.add(n)));
+  let best=null,bestGain=-Infinity;
+  S.players.forEach(p=>{
+    if(!sessionNames.has(p.name)||p.matches===0)return;
+    let sWins=0,sMatches=0;
+    S.log.forEach(e=>{
+      if(![...e.t1.split(' & '),...e.t2.split(' & ')].includes(p.name))return;
+      sMatches++;
+      if(e.winner.split(' & ').includes(p.name))sWins++;
+    });
+    if(!sMatches)return;
+    const sessionWR=Math.round(sWins/sMatches*100);
+    const prevWR=sMatches<p.matches?Math.round((p.wins-sWins)/(p.matches-sMatches)*100):50;
+    const gain=sessionWR-prevWR;
+    if(gain>bestGain){bestGain=gain;best={player:p,gain,sessionWR,prevWR};}
+  });
+  return best;
+}
+
+/* Rematch prevention: returns true if this exact pairing just played.
+   Automatically bypassed when ≤3 players are waiting (no real alternative). */
+function isRematch(team1,team2){
+  if(availablePlayers().length<=3||S.log.length===0)return false;
+  const last=S.log[0];
+  const lT1=last.t1.split(' & ').sort().join('|');
+  const lT2=last.t2.split(' & ').sort().join('|');
+  const nT1=team1.map(p=>p.name).sort().join('|');
+  const nT2=team2.map(p=>p.name).sort().join('|');
+  return(nT1===lT1&&nT2===lT2)||(nT1===lT2&&nT2===lT1);
 }
 
 /* Remove a player from the queue with a confirmation toast-style dialog */
@@ -1158,7 +1338,21 @@ function renderAdvPanel(n){
         <div class="adv-bal-item">Avg Skill: <b>${avgSkA}</b> vs <b>${avgSkB}</b></div>
         <div class="adv-bal-item">Avg WR: <b>${avgWrA}%</b> vs <b>${avgWrB}%</b></div>
         ${gPen>0?`<div class="adv-bal-item" style="color:#E8A04C;border-color:#E8A04C55">⚠ Gender imbalance</div>`:''}
-      </div>
+        ${(()=>{
+          // Rematch check
+          const rm=isRematch(st.teamA,st.teamB);
+          if(!rm)return'';
+          return`<div class="adv-bal-item" style="color:#C06020;border-color:#C0602055">🔄 Rematch warning</div>`;
+        })()}
+        ${(()=>{
+          // Head-to-head for singles
+          if(st.mode==='singles'&&st.teamA.length===1&&st.teamB.length===1){
+            const h2h=getHeadToHead(st.teamA[0],st.teamB[0]);
+            if(h2h.together===0)return'';
+            return`<div class="adv-bal-item" title="Head-to-head record">⚔ H2H: ${h2h.p1wins}–${h2h.p2wins} (${h2h.together} matches)</div>`;
+          }
+          return'';
+        })()}      </div>
     </div>`;
   } else {
     const tnA=st.teamA.map(p=>p.name).join(', ')||'—';
@@ -1327,6 +1521,7 @@ function startMatch(ci,sug){
   court.match={team1:sug.team1,team2:sug.team2,score1:0,score2:0,mode:sug.mode};
   court.elapsed=0;
   court.timer=setInterval(()=>{court.elapsed++;const el=document.getElementById('ct'+ci);if(el)el.textContent=fmtTime(court.elapsed)},1000);
+  playSound('start');
   render();autoSave();
 }
 
@@ -1344,9 +1539,14 @@ function endMatch(ci,winner){
     s1:m.score1,s2:m.score2,
     winner:winner===1?m.team1.map(p=>p.name).join(' & '):m.team2.map(p=>p.name).join(' & ')
   };
+  const elapsedSnap=court.elapsed;
   S.log.unshift(entry);
   court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
-  toast('Match recorded — great game!');render();autoSave();
+  overtimeAlerted.delete(ci);
+  render();autoSave();
+  // Show recap modal after brief render delay
+  setTimeout(()=>showMatchRecap(entry,court.id,elapsedSnap),100);
+  playSound('start'); // celebratory tone
   // Save match + update all player stats in DB (non-blocking)
   dbSaveMatch(entry).catch(e=>console.error('DB match save failed:',e));
   [...winners,...losers].forEach(p=>{
@@ -1427,7 +1627,7 @@ function genMatches(mode){
       }
       if(best){
         const bal=Math.round(100-Math.min(bestDiff/60*55,50));
-        results.push({team1:[p1],team2:[best],balance:Math.max(bal,50),mode:'singles'});
+        results.push({team1:[p1],team2:[best],balance:Math.max(bal,50),mode:'singles',rematchWarning:isRematch([p1],[best])});
         used.add(p1.id);used.add(best.id);
       }
     }
@@ -1468,7 +1668,7 @@ function genMatches(mode){
             }
           }
           if(best.score>-Infinity){
-            results.push({team1:best.team1,team2:best.team2,balance:best.balance,mode,genderWarning:best.gPen>0});
+            results.push({team1:best.team1,team2:best.team2,balance:best.balance,mode,genderWarning:best.gPen>0,rematchWarning:isRematch(best.team1,best.team2)});
             [p1,sorted[j],sorted[k],sorted[l]].forEach(p=>used.add(p.id));
             break outer;
           }
@@ -1500,6 +1700,7 @@ function renderSuggestions(){
         <span>Option ${idx+1}</span>
         <span class="mode-tag ${MODE_C[s.mode]||'md'}">${s.mode}</span>
         ${s.genderWarning?`<span style="font-size:9px;color:#E8A04C;border:1px solid #E8A04C55;border-radius:2px;padding:1px 5px">⚠ Gender imbalance</span>`:''}
+        ${s.rematchWarning?`<span style="font-size:9px;color:#C06020;border:1px solid #C0602055;border-radius:2px;padding:1px 5px">🔄 Rematch</span>`:''}
         <span style="margin-left:auto;color:var(--pk);font-weight:700">${s.balance}% balanced</span>
       </div>
       <div class="match-grid">
@@ -1582,7 +1783,7 @@ function addPlayer(){
   const name=document.getElementById('p-name').value.trim();
   if(!name){toast('Enter a player name');return}
   const p={id:S.nextId++,name,gender:document.getElementById('p-gender').value,skill:parseInt(document.getElementById('p-skill').value),
-    mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,inQueue:true,onCourt:false,lastMatchAt:-99};
+    mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,inQueue:true,onCourt:false,lastMatchAt:-99,queueCount:1};
   S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
   document.getElementById('p-name').value='';
   toast(p.name+' added to session');render();autoSave();
@@ -1592,7 +1793,7 @@ function addPlayer(){
 function toggleQueue(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
   if(p.inQueue){p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);toast(p.name+' left queue')}
-  else{p.inQueue=true;S.queue.push(pid_);toast(p.name+' joined queue')}
+  else{p.inQueue=true;S.queue.push(pid_);p.queueCount=(p.queueCount||0)+1;toast(p.name+' joined queue');playSound('queue')}
   render();autoSave();
 }
 function removePlayer(pid_){
@@ -1676,7 +1877,7 @@ function renderCourts(){
       const m=court.match;
       return `<div class="court-card playing">
         <div class="court-hdr">
-          <div class="court-num">Court ${court.id}</div>
+          <input class="court-nick-inp" value="${S.courtNicknames[i]||'Court '+court.id}" onchange="saveCourtNick(${i},this.value)" onclick="this.select()" title="Click to rename this court"/>
           <div class="mode-tag ${MODE_C[m.mode]||'md'}">${MODE_LBL[m.mode]}</div>
           <div style="margin-left:auto;text-align:right"><div id="ct${i}" class="timer-big">${fmtTime(court.elapsed)}</div><div class="timer-lbl">Duration</div></div>
           <div class="status-dot dot-on" style="margin-left:8px;align-self:flex-start;margin-top:6px"></div>
@@ -1701,7 +1902,7 @@ function renderCourts(){
     const sug=genMatches(cm)[0];
     return `<div class="court-card">
       <div class="court-hdr">
-        <div class="court-num">Court ${court.id}</div>${modePills}
+        <input class="court-nick-inp" value="${S.courtNicknames[i]||'Court '+court.id}" onchange="saveCourtNick(${i},this.value)" onclick="this.select()" title="Click to rename this court"/>${modePills}
         <div style="margin-left:auto;display:flex;align-items:center;gap:5px"><span style="font-size:10px;color:var(--gr4)">Idle</span><div class="status-dot dot-idle"></div></div>
       </div>
       ${sug?`<div class="sug-box">
@@ -1738,10 +1939,11 @@ function renderQueueList(){
     // Winning streak badge — 3+ consecutive wins
     const streak=getWinStreak(p);
     const streakBadge=streak>=3?`<span class="streak-badge">🔥 ${streak} streak</span>`:'';
+    const formDots=getFormDots(p);
     return `<div class="pl-item ${inA?'sel-a':inB?'sel-b':''}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
       <div class="q-pos">${i+1}</div>${avHtml(p)}
       <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${tBadge}${recentBadge}${gcBadge}${streakBadge}</div>
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${tBadge}${recentBadge}${gcBadge}${streakBadge}${formDots}</div>
         <div class="pl-meta">${p.gender==='F'?'Female':'Male'} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR</div>
       </div>
       <div class="sk ${SKILL_C[p.skill]}">${SKILL_N[p.skill]}</div>
@@ -1831,8 +2033,34 @@ function renderLeaderboard(){
     const lb = document.getElementById('lb-list');
     if(!lb) return;
     const ranked = [...S.players].filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a)||b.wins-a.wins);
+    const improved = getMostImproved();
+    // Banner for most improved
+    const banner = improved
+      ? `<div style="background:var(--b3);border:1px solid var(--pkl);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:16px">📈</span>
+          <div><div style="font-size:12px;font-weight:700;color:var(--pk)">Most Improved This Session</div>
+          <div style="font-size:11px;color:var(--gr4)">${improved.player.name} · Win rate up +${improved.gain}% (${improved.prevWR}% → ${improved.sessionWR}%)</div></div>
+        </div>` : '';
     lb.innerHTML = ranked.length
-      ? ranked.map((p,i) => lbRowHtml(p, i, p.wins, p.losses, p.matches, '')).join('')
+      ? banner + ranked.map((p,i) => {
+          const streak = getWinStreak(p);
+          const streakBadge = streak>=3?`<span class="streak-badge" style="margin-left:4px">🔥${streak}</span>`:'';
+          const improvedBadge = improved&&improved.player.id===p.id
+            ?`<span style="font-size:9px;background:#E8F8EE;color:#2E7D52;border:1px solid #9ED4B8;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px">📈 Most Improved</span>`:''
+          const qCount = getQueueCount(p);
+          const qBadge = qCount>0?`<span style="font-size:9px;color:var(--gr4)"> · queued ${qCount}×</span>`:'';
+          return `<div class="lb-row">
+            <div class="lb-rank ${['r1','r2','r3'][i]||'rn'}">${i+1}</div>
+            ${avHtml(p,26)}
+            <div class="lb-name">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">${p.name}${streakBadge}${improvedBadge}</div>
+              <div style="font-size:9px;color:var(--gr4)">${SKILL_N[p.skill]}${qBadge}</div>
+            </div>
+            <div class="lb-stat">${p.matches}G</div>
+            <div class="lb-stat">${p.wins}W/${p.losses}L</div>
+            <div class="lb-wr">${wr(p)}%</div>
+          </div>`;
+        }).join('')
       : `<div class="empty-state">No matches recorded yet — overall stats build up over multiple sessions.</div>`;
 
   } else {
@@ -1877,11 +2105,32 @@ function renderLeaderboard(){
       const totalPlayers = Object.keys(sessionStats).length;
       const topSession = sessionPlayers[0];
       const mostActive = [...sessionPlayers].sort((a,b)=>b.sMatches-a.sMatches)[0];
-      sStat.innerHTML = `
+      // Player of the Day
+      const potd = getPlayerOfDay();
+      const potdHtml = potd?`
+        <div class="potd-banner" style="margin-bottom:12px">
+          <div style="font-size:11px;opacity:0.8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">🏅 Player of the Day</div>
+          <div class="potd-name">${potd.player.name}</div>
+          <div style="font-size:11px;opacity:0.85;margin-top:4px">${potd.sessionWins} session wins${potd.streak>=3?' · 🔥'+potd.streak+' streak':''}</div>
+        </div>`:'';
+      // Rivalry tracker
+      const rivals = getRivalries();
+      const rivalHtml = rivals.length?`
+        <div style="margin-bottom:12px">
+          <div class="st" style="margin-bottom:6px">⚔ Top Rivalries</div>
+          ${rivals.map(r=>`<div class="rivalry-chip">
+            <span style="font-weight:700;color:var(--w)">${r.p1}</span>
+            <span style="color:var(--gr4)">vs</span>
+            <span style="font-weight:700;color:var(--w)">${r.p2}</span>
+            <span class="chip" style="margin-left:auto">${r.count}× matches</span>
+          </div>`).join('')}
+        </div>`:'';
+      sStat.innerHTML = potdHtml+`
         <div class="stat-c"><div class="stat-v">${totalMatches}</div><div class="stat-l">Matches</div></div>
         <div class="stat-c"><div class="stat-v">${totalPlayers}</div><div class="stat-l">Players</div></div>
         <div class="stat-c"><div class="stat-v" style="font-size:14px">${topSession?topSession.name.split(' ')[0]:'—'}</div><div class="stat-l">Best Win %</div></div>
-        <div class="stat-c"><div class="stat-v" style="font-size:14px">${mostActive?mostActive.name.split(' ')[0]:'—'}</div><div class="stat-l">Most Active</div></div>`;
+        <div class="stat-c"><div class="stat-v" style="font-size:14px">${mostActive?mostActive.name.split(' ')[0]:'—'}</div><div class="stat-l">Most Active</div></div>`
+        +rivalHtml;
     }
 
     // Session leaderboard
@@ -2125,12 +2374,325 @@ async function initSupabase(){
   toast('Supabase connected ✓');
 }
 
+
+/* ════════════════════════════════════════════════════
+   QoL FEATURES — Phase 2
+   ════════════════════════════════════════════════════ */
+
+/* ── State extensions ── */
+if(!S.announcement) S.announcement='';
+if(!S.courtNicknames) S.courtNicknames={};
+if(!S.courtTimeLimit) S.courtTimeLimit=30; // minutes
+if(!S.soundOn) S.soundOn=true;
+const overtimeAlerted=new Set(); // courts already alerted this match
+
+/* ── 1. CONFETTI ── */
+function launchConfetti(){
+  const canvas=document.getElementById('confetti-canvas');
+  if(!canvas)return;
+  canvas.style.display='block';
+  const ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  const pieces=[];
+  const colors=['#E8537A','#F2879E','#4A7C59','#FFD700','#5B8DD9','#FFF'];
+  for(let i=0;i<120;i++){
+    pieces.push({
+      x:Math.random()*canvas.width,y:-10,
+      w:Math.random()*10+5,h:Math.random()*6+3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      angle:Math.random()*360,
+      vx:(Math.random()-0.5)*4,vy:Math.random()*4+2,
+      va:(Math.random()-0.5)*5,alpha:1
+    });
+  }
+  let frame=0;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.angle+=p.va;p.alpha-=0.008;
+      ctx.save();ctx.globalAlpha=Math.max(0,p.alpha);
+      ctx.translate(p.x,p.y);ctx.rotate(p.angle*Math.PI/180);
+      ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    frame++;
+    if(frame<180)requestAnimationFrame(draw);
+    else{ctx.clearRect(0,0,canvas.width,canvas.height);canvas.style.display='none';}
+  }
+  draw();
+}
+
+/* ── 2. SOUND EFFECTS ── */
+function playSound(type){
+  if(!S.soundOn)return;
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    if(type==='start'){osc.frequency.setValueAtTime(523,ctx.currentTime);osc.frequency.setValueAtTime(659,ctx.currentTime+0.1);osc.frequency.setValueAtTime(784,ctx.currentTime+0.2);gain.gain.setValueAtTime(0.18,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);}
+    else if(type==='end'){osc.frequency.setValueAtTime(784,ctx.currentTime);osc.frequency.setValueAtTime(659,ctx.currentTime+0.1);osc.frequency.setValueAtTime(523,ctx.currentTime+0.2);osc.frequency.setValueAtTime(440,ctx.currentTime+0.35);gain.gain.setValueAtTime(0.18,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);}
+    else if(type==='queue'){osc.frequency.setValueAtTime(440,ctx.currentTime);osc.frequency.setValueAtTime(523,ctx.currentTime+0.08);gain.gain.setValueAtTime(0.1,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.2);}
+    osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.6);
+  }catch(e){}
+}
+function toggleSound(){
+  S.soundOn=!S.soundOn;
+  const btn=document.getElementById('sound-btn');
+  if(btn){btn.textContent=S.soundOn?'🔔 Sound':'🔕 Sound';btn.classList.toggle('on',S.soundOn);}
+  toast(S.soundOn?'Sound on 🔔':'Sound off 🔕');
+}
+
+/* ── 3. MATCH RECAP MODAL ── */
+function showMatchRecap(entry,courtId,elapsed){
+  launchConfetti();
+  playSound('end');
+  const bd=document.getElementById('recap-modal-backdrop');if(!bd)return;
+  document.getElementById('recap-court').textContent='Court '+courtId+' · '+fmtTime(elapsed);
+  document.getElementById('recap-teams').textContent=entry.t1+' vs '+entry.t2;
+  document.getElementById('recap-score').textContent=entry.s1+' : '+entry.s2;
+  document.getElementById('recap-winner').textContent='🏆 '+entry.winner+' wins!';
+  // Fun stat
+  const funStats=['Great game by all! 🏸','Rally hard, win harder!','Smash it! 🚀','That's the spirit!','Rackets up! 🎉'];
+  // Check for upset
+  const winTeam=entry.winner.split(' & ').map(n=>S.players.find(p=>p.name===n)).filter(Boolean);
+  const loseTeam=(entry.winner===entry.t1?entry.t2:entry.t1).split(' & ').map(n=>S.players.find(p=>p.name===n)).filter(Boolean);
+  let funStat=funStats[Math.floor(Math.random()*funStats.length)];
+  if(winTeam.length&&loseTeam.length){
+    const avgWinSkill=winTeam.reduce((s,p)=>s+p.skill,0)/winTeam.length;
+    const avgLoseSkill=loseTeam.reduce((s,p)=>s+p.skill,0)/loseTeam.length;
+    if(avgWinSkill<avgLoseSkill-0.5)funStat='🎊 Biggest Upset Alert! Lower-skilled team won!';
+    if(fmtTime(elapsed).startsWith('0:'))funStat='⚡ Lightning fast match!';
+  }
+  if(S.log.length===1)funStat='🏸 First match of the session!';
+  document.getElementById('recap-fun-stat').textContent=funStat;
+  // Streak stats
+  const statsHtml=winTeam.map(p=>{const s=getWinStreak(p);return s>=2?`<div style="font-size:11px;color:var(--pk);font-weight:600">🔥 ${p.name}: ${s} streak</div>`:''}).filter(Boolean).join('');
+  document.getElementById('recap-stats').innerHTML=statsHtml||'';
+  bd.classList.add('open');
+}
+function closeRecapModal(){document.getElementById('recap-modal-backdrop').classList.remove('open');}
+
+/* ── 4. COURT TIMER ALERT ── */
+const COURT_TIME_LIMIT_MIN=30;
+function checkCourtTimers(){
+  S.courts.forEach((c,i)=>{
+    if(c.status!=='playing')return;
+    const mins=Math.floor(c.elapsed/60);
+    if(mins>=COURT_TIME_LIMIT_MIN&&!overtimeAlerted.has(i)){
+      overtimeAlerted.add(i);
+      const bd=document.getElementById('timer-alert-backdrop');
+      if(bd){
+        const nick=S.courtNicknames[i]||('Court '+(i+1));
+        document.getElementById('timer-alert-title').textContent=nick+' — Overtime!';
+        document.getElementById('timer-alert-body').textContent=
+          `Match has been running for ${fmtTime(c.elapsed)}. Consider wrapping up soon.`;
+        bd.classList.add('open');
+        playSound('queue');
+      }
+    }
+    // Update timer card class
+    const card=document.querySelector('.court-card.playing:nth-of-type('+(i+1)+')');
+    const timerEl=document.getElementById('ct'+i);
+    if(timerEl&&mins>=COURT_TIME_LIMIT_MIN)timerEl.classList.add('overtime');
+  });
+}
+
+/* ── 5. COURT NICKNAMES ── */
+function saveCourtNick(i,val){
+  S.courtNicknames[i]=val.trim()||'';
+  autoSave();
+}
+
+/* ── 6. ANNOUNCEMENTS ── */
+function showAnnouncementEdit(){
+  const inp=document.getElementById('ann-input');
+  if(inp)inp.value=S.announcement||'';
+  document.getElementById('ann-modal-backdrop').classList.add('open');
+  setTimeout(()=>{if(inp)inp.focus();},100);
+}
+function saveAnnouncement(){
+  const val=document.getElementById('ann-input')?.value.trim()||'';
+  S.announcement=val;
+  updateAnnouncementBar();
+  document.getElementById('ann-modal-backdrop').classList.remove('open');
+  autoSave();
+  toast(val?'Announcement posted 📢':'Announcement cleared');
+}
+function clearAnnouncement(){S.announcement='';updateAnnouncementBar();autoSave();}
+function updateAnnouncementBar(){
+  const bar=document.getElementById('announcement-bar');
+  const txt=document.getElementById('announcement-text');
+  if(!bar||!txt)return;
+  if(S.announcement){txt.textContent=S.announcement;bar.classList.remove('hidden');}
+  else{bar.classList.add('hidden');}
+}
+
+/* ── 7. LUCKY DRAW ── */
+function openLuckyDraw(){
+  document.getElementById('lucky-modal-backdrop').classList.add('open');
+  luckyDraw();
+}
+function luckyDraw(){
+  const pool=availablePlayers();
+  const res=document.getElementById('lucky-result');if(!res)return;
+  if(pool.length<2){res.innerHTML='<div style="color:var(--gr4);font-size:12px">Not enough players in queue</div>';return;}
+  // Shuffle with Fisher-Yates, then pick 2 or 4
+  const shuffled=[...pool].sort(()=>Math.random()-0.5);
+  const needed=Math.min(pool.length>=4?4:2,pool.length);
+  const picked=shuffled.slice(0,needed);
+  const teamA=picked.slice(0,needed/2);
+  const teamB=picked.slice(needed/2);
+  res.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--male);font-weight:700;text-transform:uppercase;margin-bottom:4px">Team A</div>
+        ${teamA.map(p=>`<div style="font-weight:600;font-size:13px;padding:3px 10px;background:var(--b3);border-radius:4px;margin-bottom:3px">${p.name}</div>`).join('')}
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gr3)">VS</div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--pk);font-weight:700;text-transform:uppercase;margin-bottom:4px">Team B</div>
+        ${teamB.map(p=>`<div style="font-weight:600;font-size:13px;padding:3px 10px;background:var(--b3);border-radius:4px;margin-bottom:3px">${p.name}</div>`).join('')}
+      </div>
+    </div>`;
+  playSound('queue');
+}
+
+/* ── 8. PLAYER FORM DOTS (last 5 results) ── */
+function getFormDots(p){
+  const results=[];
+  for(let i=0;i<S.log.length&&results.length<5;i++){
+    const e=S.log[i];
+    const names=[...e.t1.split(' & '),...e.t2.split(' & ')];
+    if(!names.includes(p.name))continue;
+    const won=e.winner.split(' & ').includes(p.name);
+    results.push(won?'W':'L');
+  }
+  if(!results.length)return'';
+  return'<span style="display:inline-flex;gap:2px;align-items:center;margin-left:4px">'+
+    results.map(r=>`<span class="form-dot form-dot-${r==='W'?'w':'l'}" title="${r==='W'?'Win':'Loss'}"></span>`).join('')+
+  '</span>';
+}
+
+/* ── 9. PLAYER OF THE DAY ── */
+function getPlayerOfDay(){
+  if(!S.log.length) return null;
+  // Session wins
+  const wins={};
+  S.log.forEach(e=>{
+    e.winner.split(' & ').forEach(n=>{wins[n]=(wins[n]||0)+1;});
+  });
+  const top=Object.entries(wins).sort((a,b)=>b[1]-a[1])[0];
+  if(!top)return null;
+  const p=S.players.find(x=>x.name===top[0]);
+  return p?{player:p,sessionWins:top[1],streak:getWinStreak(p)}:null;
+}
+
+/* ── 10. RIVALRY TRACKER ── */
+function getRivalries(){
+  const pairs={};
+  S.log.forEach(e=>{
+    const t1=e.t1.split(' & ').sort();
+    const t2=e.t2.split(' & ').sort();
+    if(t1.length===1&&t2.length===1){
+      const key=[t1[0],t2[0]].sort().join('|');
+      if(!pairs[key])pairs[key]={p1:t1[0],p2:t2[0],count:0};
+      pairs[key].count++;
+    }
+  });
+  return Object.values(pairs).sort((a,b)=>b.count-a.count).slice(0,3);
+}
+
+/* ── 11. WHATSAPP SHARE ── */
+function shareWhatsApp(){
+  const ranked=[...S.players].filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a)||b.wins-a.wins).slice(0,5);
+  if(!ranked.length){toast('No stats to share yet');return;}
+  const medals=['🥇','🥈','🥉','4.','5.'];
+  const mgr=S.manager;
+  const header=mgr.name?`*${mgr.name}'s Smash Hub Session*`:'*Smash Hub Session Results*';
+  const date=mgr.date?`📅 ${new Date(mgr.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} `:'' ;
+  const venue=mgr.venue?`📍 ${mgr.venue}\n`:'';
+  const lines=ranked.map((p,i)=>`${medals[i]} ${p.name} — ${wr(p)}% WR (${p.wins}W/${p.losses}L)`);
+  const potd=getPlayerOfDay();
+  const potdLine=potd?`\n🏅 Player of the Day: *${potd.player.name}* (${potd.sessionWins} session wins)`:'';
+  const msg=`${header}\n${date}${venue}\n*Leaderboard:*\n${lines.join('\n')}${potdLine}\n\n🏸 Managed with Smash Hub`;
+  const url='https://wa.me/?text='+encodeURIComponent(msg.replace(/\\n/g,'\n'));
+  window.open(url,'_blank');
+}
+
+/* ── 12. QR CODE ── */
+function showQR(){
+  const url=window.location.href.split('?')[0].split('#')[0];
+  const bd=document.getElementById('qr-modal-backdrop');
+  const lbl=document.getElementById('qr-url-label');
+  const img=document.getElementById('qr-code-img');
+  if(!bd)return;
+  if(lbl)lbl.textContent=url;
+  // Use free QR API
+  if(img)img.innerHTML=`<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" alt="QR" style="width:200px;height:200px;border-radius:6px"/>`;
+  bd.classList.add('open');
+}
+
+/* ── 13. BULK QUEUE TOGGLE ── */
+// Exposed via button in Players tab - queue all unqueued players at once
+function queueAll(){
+  const unqueued=S.players.filter(p=>!p.inQueue&&!p.onCourt);
+  if(!unqueued.length){toast('All players are already in queue');return;}
+  unqueued.forEach(p=>{p.inQueue=true;S.queue.push(p.id);p.queueCount=(p.queueCount||0)+1;});
+  toast(unqueued.length+' players added to queue');render();autoSave();
+}
+function dequeueAll(){
+  const queued=S.players.filter(p=>p.inQueue&&!p.onCourt);
+  if(!queued.length){toast('No players in queue');return;}
+  queued.forEach(p=>{p.inQueue=false;S.queue=S.queue.filter(x=>x!==p.id);});
+  toast(queued.length+' players removed from queue');render();autoSave();
+}
+
+/* ── 14. BIGGEST UPSET DETECTION ── */
+function detectUpset(entry){
+  const winNames=entry.winner.split(' & ');
+  const loseNames=(entry.winner===entry.t1?entry.t2:entry.t1).split(' & ');
+  const winners=winNames.map(n=>S.players.find(p=>p.name===n)).filter(Boolean);
+  const losers=loseNames.map(n=>S.players.find(p=>p.name===n)).filter(Boolean);
+  if(!winners.length||!losers.length)return false;
+  const avgWinSkill=winners.reduce((s,p)=>s+p.skill,0)/winners.length;
+  const avgLoseSkill=losers.reduce((s,p)=>s+p.skill,0)/losers.length;
+  return avgWinSkill<avgLoseSkill-0.5;
+}
+
+/* ── INIT new state fields on restore ── */
+function initNewStateFields(){
+  if(!S.announcement)S.announcement='';
+  if(!S.courtNicknames)S.courtNicknames={};
+  if(!S.soundOn&&S.soundOn!==false)S.soundOn=true;
+  updateAnnouncementBar();
+}
+
+
+function restoreExtra(){
+  try{
+    const d=JSON.parse(localStorage.getItem('smashhub_extra')||'{}');
+    if(d.announcement!==undefined)S.announcement=d.announcement;
+    if(d.courtNicknames)S.courtNicknames=d.courtNicknames;
+    if(d.soundOn!==undefined)S.soundOn=d.soundOn;
+  }catch(e){}
+  updateAnnouncementBar();
+  // Update sound button if exists
+  const btn=document.getElementById('sound-btn');
+  if(btn){btn.textContent=S.soundOn!==false?'🔔 Sound':'🔕 Sound';btn.classList.toggle('on',S.soundOn!==false);}
+}
+
+/* ── Court timer checker — runs every 30s ── */
+setInterval(checkCourtTimers,30000);
+
 // Init — restore session from localStorage if available, else start fresh
 document.getElementById('mgr-date-inp').value=new Date().toISOString().slice(0,10);
 loadTheme();
 const _restored=restoreSession();
 if(!_restored) initCourts(3);
-initAdvPanels(); // inject the 3 advanced matchmaking panel shells
+restoreExtra();        // restore sound, announcement, court nicknames
+initNewStateFields();  // ensure new state fields exist
+initAdvPanels();       // inject the 3 advanced matchmaking panel shells
 render();
 initSupabase();
 if(_restored) toast('Session restored ✓ — welcome back!');
