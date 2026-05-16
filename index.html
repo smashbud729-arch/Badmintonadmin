@@ -666,6 +666,10 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
       <button class="btn btn-g" style="flex:1" onclick="saveManager()">Save Session</button>
       <button class="btn btn-o" onclick="document.getElementById('mgr-modal').classList.remove('open')">Cancel</button>
     </div>
+    <div style="border-top:1px solid var(--gr);margin-top:14px;padding-top:12px">
+      <div style="font-size:11px;color:var(--gr4);margin-bottom:8px">⚠ Danger Zone</div>
+      <button class="btn btn-red" style="width:100%" onclick="confirmEndSession()">🔴 End Session</button>
+    </div>
   </div>
 </div>
 
@@ -1028,6 +1032,13 @@ function saveSession(){
       pay: S.pay,
       queueSort: S.queueSort,
       currentSessionId: currentSessionId,
+      advStates: ADV_STATES.map(st=>({
+        pool: st.pool,
+        teamA: st.teamA.map(p=>p.id),
+        teamB: st.teamB.map(p=>p.id),
+        mode: st.mode,
+        targetCourt: st.targetCourt
+      })),
       savedAt: Date.now()
     };
     localStorage.setItem(LS_KEY, JSON.stringify(snapshot));
@@ -1102,6 +1113,18 @@ function restoreSession(){
     const n=S.courts.length;
     document.querySelectorAll('.cb').forEach((b,i)=>b.classList.toggle('active',i===n-1));
 
+    // Restore advanced panel states (player assignments persist across refresh)
+    if(snap.advStates){
+      snap.advStates.forEach((saved,i)=>{
+        if(!ADV_STATES[i]) return;
+        ADV_STATES[i].pool = saved.pool||'queue';
+        ADV_STATES[i].mode = saved.mode||'doubles';
+        ADV_STATES[i].targetCourt = saved.targetCourt!=null?saved.targetCourt:null;
+        ADV_STATES[i].teamA = (saved.teamA||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+        ADV_STATES[i].teamB = (saved.teamB||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+      });
+    }
+
     return true;
   } catch(e){ console.warn('Session restore failed:',e); return false; }
 }
@@ -1114,6 +1137,17 @@ function clearSession(){
   S.manager={name:'',date:'',venue:''};
   currentSessionId=null;
   toast('Session cleared ✓');
+}
+
+/* Confirm and end the session — shown from the Session Setup modal */
+function confirmEndSession(){
+  document.getElementById('mgr-modal').classList.remove('open');
+  if(!confirm('End this session? All match history and player data will be cleared. This cannot be undone.')){
+    document.getElementById('mgr-modal').classList.add('open');
+    return;
+  }
+  clearSession();
+  location.reload();
 }
 
 /* ── Theme toggle ── */
