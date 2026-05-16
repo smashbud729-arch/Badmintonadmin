@@ -97,6 +97,165 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 @media(max-width:680px){.two-col{grid-template-columns:1fr}}
 
+/* ═══════════════════════════════════════
+   MOBILE STYLES — max-width: 600px
+   ═══════════════════════════════════════ */
+@media(max-width:600px){
+  /* Layout */
+  html,body{font-size:13px}
+  .app::before{height:2px}
+  .main{padding:10px}
+
+  /* Header */
+  .hdr{padding:8px 12px;gap:8px}
+  .logo{font-size:20px}
+  .logo-sub{font-size:8px}
+  .hdr-stats{gap:10px}
+  .hs-v{font-size:17px}
+  .hs-l{font-size:8px}
+  .mgr-badge{padding:4px 8px}
+  .mgr-name{font-size:11px}
+  .mgr-sub{font-size:8px}
+  /* Hide header mascot on small screens — save space */
+  .hdr img#header-mascot{height:38px}
+
+  /* Sync bar — collapse to icons only */
+  .sync-bar{padding:3px 10px;flex-wrap:nowrap;overflow-x:auto;gap:4px}
+  .sync-bar::-webkit-scrollbar{display:none}
+  .sync-actions{gap:4px;flex-shrink:0}
+  .sync-actions .btn{padding:3px 7px;font-size:10px}
+  .sync-actions .wa-btn{padding:3px 7px;font-size:10px}
+
+  /* Court control */
+  .court-ctrl{padding:6px 10px;gap:6px}
+  .cb{width:26px;height:26px;font-size:11px}
+
+  /* Nav — slightly smaller */
+  .nt{font-size:9px;padding:8px 2px}
+
+  /* Court cards */
+  .court-card{padding:11px}
+  .court-num,.court-nick-inp{font-size:16px}
+  .timer-big{font-size:24px}
+  .match-grid{grid-template-columns:1fr 28px 1fr;gap:4px}
+  .pchip{padding:3px 6px}
+  .pn{font-size:11px}
+  .score-inp{width:40px;height:40px;font-size:20px}
+  .court-actions{gap:4px}
+  .court-actions .btn{padding:5px 8px;font-size:11px}
+
+  /* Queue */
+  .sort-bar{gap:3px;margin-bottom:6px}
+  .sort-btn{padding:2px 7px;font-size:9px}
+  .pl-item{padding:7px 9px;gap:7px}
+  .pl-name{font-size:12px}
+  .pl-meta{font-size:9px}
+  .q-pos{font-size:13px;width:16px}
+  .sk{font-size:8px;padding:1px 5px}
+
+  /* Suggestion box */
+  .sug-box{padding:9px}
+  .sug-title{font-size:14px}
+  .sug-lbl{font-size:8px}
+
+  /* Advanced panel */
+  .builder{padding:10px}
+  .builder-teams{grid-template-columns:1fr 1fr;gap:6px}
+  .team-slot{padding:7px;min-height:52px}
+  .team-slot-lbl{font-size:9px}
+  .slot-player{font-size:11px;padding:2px 5px}
+  .adv-bal-row{gap:4px}
+  .adv-bal-item{font-size:9px;padding:2px 5px}
+
+  /* Players tab */
+  .pl-item .btn-sm{padding:4px 7px;font-size:10px;min-width:50px}
+  .pl-item .btn-xs{padding:2px 6px;font-size:9px}
+
+  /* Payment tab */
+  .pay-row{padding:8px 10px;gap:7px}
+  .pay-info>div:first-child{font-size:12px}
+  .pay-btn{padding:4px 7px;font-size:9px}
+  .pay-note{width:80px;font-size:10px}
+  .pay-summ{gap:10px}
+  .psv{font-size:16px}
+  .psl{font-size:8px}
+
+  /* Leaderboard */
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat-v{font-size:22px}
+  .stat-l{font-size:8px}
+  .lb-row{padding:7px 9px;gap:7px}
+  .lb-rank{font-size:14px;width:20px}
+  .lb-name{font-size:12px}
+  .lb-stat{font-size:10px;width:36px}
+  .lb-wr{font-size:13px;width:36px}
+  .lb-tab{padding:6px 12px;font-size:11px}
+
+  /* Log entries */
+  .log-e{padding:7px 10px}
+  .log-t{font-size:8px}
+  .log-m{font-size:11px}
+  .log-s{font-size:12px}
+
+  /* Modals */
+  .modal{padding:18px;border-radius:10px}
+  .modal-ttl{font-size:18px}
+  .recap-modal{padding:18px}
+  .recap-score{font-size:42px}
+
+  /* Forms */
+  .fc{font-size:12px;padding:6px 9px}
+  .form-row{grid-template-columns:1fr 1fr;gap:7px}
+  .fg label{font-size:9px}
+
+  /* Section headers */
+  .sh{margin-bottom:8px}
+  .st{font-size:10px}
+  .chip{font-size:9px;padding:1px 6px}
+
+  /* Floating Nezuko/Anya corner — smaller on mobile */
+  #corner-mascot{height:100px !important}
+
+  /* Announcement bar */
+  .announcement-bar{font-size:11px;padding:6px 10px}
+
+  /* Buttons general */
+  .btn{padding:5px 10px;font-size:11px}
+  .btn-g{font-size:11px}
+  .btn-sm{padding:4px 8px;font-size:10px}
+  .btn-xs{padding:2px 6px;font-size:9px}
+
+  /* Avatar */
+  .avatar{width:26px;height:26px;font-size:11px}
+
+  /* POTD banner */
+  .potd-banner{padding:10px}
+  .potd-name{font-size:22px}
+  .rivalry-chip{font-size:10px;padding:5px 8px}
+
+  /* Mode pills */
+  .mt-pill{padding:2px 7px;font-size:9px}
+  .mode-tag{font-size:8px;padding:1px 5px}
+
+  /* Toast */
+  .toast-bar{padding:3px 10px;height:22px}
+  .toast-msg{font-size:10px}
+}
+
+/* ═══════════════════════════════════════
+   VERY SMALL SCREENS — max-width: 380px
+   ═══════════════════════════════════════ */
+@media(max-width:380px){
+  .hdr-stats{display:none}
+  .nav .nt{font-size:8px;padding:7px 1px}
+  .match-grid{gap:3px}
+  .score-inp{width:36px;height:36px;font-size:18px}
+  .form-row{grid-template-columns:1fr}
+  .court-actions .btn{padding:4px 6px;font-size:10px}
+  #corner-mascot{height:75px !important}
+  .sync-bar .btn-xs{padding:2px 5px;font-size:9px}
+}
+
 /* Section hdr */
 .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
 .st{font-size:11px;font-weight:700;color:var(--pk);text-transform:uppercase;letter-spacing:0.1em}
@@ -291,7 +450,8 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .info-note{font-size:10px;color:var(--gr4);background:var(--b3);border:1px solid var(--gr2);border-radius:4px;padding:5px 10px;margin-bottom:10px}
 .info-note b{color:var(--pk)}
 /* Supabase sync bar */
-.sync-bar{display:flex;align-items:center;gap:6px;padding:3px 14px;background:var(--b3);border-bottom:1px solid var(--gr);flex-shrink:0;min-height:22px}
+.sync-bar{display:flex;align-items:center;gap:6px;padding:3px 14px;background:var(--b3);border-bottom:1px solid var(--gr);flex-shrink:0;min-height:22px;overflow-x:auto;white-space:nowrap}
+.sync-bar::-webkit-scrollbar{display:none}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--gr3);flex-shrink:0;transition:background 0.3s}
 .sync-dot.ok{background:#3DA06A}.sync-dot.err{background:var(--pk)}
 .sync-dot.busy{background:var(--pk);animation:sbpulse 0.8s infinite alternate}
@@ -544,11 +704,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 <!-- NAV (5 tabs) -->
 <div class="nav">
-  <div class="nt active" onclick="showView('courts')">Courts</div>
-  <div class="nt" onclick="showView('queue')">Queue</div>
-  <div class="nt" onclick="showView('players')">Players</div>
-  <div class="nt" onclick="showView('payment')">Payment</div>
-  <div class="nt" onclick="showView('leaderboard')">Leaderboard</div>
+  <div class="nt active" onclick="showView('courts')">🏟 Courts</div>
+  <div class="nt" onclick="showView('queue')">📋 Queue</div>
+  <div class="nt" onclick="showView('players')">👤 Players</div>
+  <div class="nt" onclick="showView('payment')">💰 Payment</div>
+  <div class="nt" onclick="showView('leaderboard')">🏆 Board</div>
 </div>
 
 
@@ -2168,7 +2328,10 @@ function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nt').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
-  document.querySelectorAll('.nt').forEach(el=>{if(el.textContent.toLowerCase()===v)el.classList.add('active')});
+  // Match nav tab by its onclick attribute rather than text content (text has emoji now)
+  document.querySelectorAll('.nt').forEach(el=>{
+    if(el.getAttribute('onclick')===`showView('${v}')`)el.classList.add('active');
+  });
   if(v==='payment')renderPayment();else render();
 }
 
