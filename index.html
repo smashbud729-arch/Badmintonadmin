@@ -818,11 +818,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
           <div class="fg">
             <label>Skill Level</label>
             <select class="fc" id="p-skill">
-              <option value="1">1 · Beginner</option>
-              <option value="2">2 · Recreational</option>
-              <option value="3" selected>3 · Intermediate</option>
-              <option value="4">4 · Advanced</option>
-              <option value="5">5 · Elite</option>
+              <option value="1">1 · E</option>
+              <option value="2">2 · D</option>
+              <option value="3" selected>3 · C</option>
+              <option value="4">4 · B</option>
+              <option value="5">5 · A</option>
             </select>
           </div>
           <div class="fg"><label>Preferred Mode</label>
@@ -980,7 +980,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 </div>
 
 <script>
-const SKILL_N=['','Beginner','Recreational','Intermediate','Advanced','Elite'];
+const SKILL_N=['','E','D','C','B','A'];
 const SKILL_C=['','sk1','sk2','sk3','sk4','sk5'];
 const MODE_C={singles:'ms',doubles:'md',mixed:'mm',any:'md'};
 const MODE_LBL={singles:'Singles',doubles:'Doubles',mixed:'Mixed',any:'Any'};
@@ -1645,11 +1645,11 @@ function renderAllPlayers(){
       ${S.editingSkill===p.id?`<div class="edit-skill-row">
         <label>Skill level:</label>
         <select onchange="saveSkill(${p.id},this.value)" style="flex:1;background:var(--b2);border:1.5px solid var(--pkl);border-radius:6px;color:var(--w);padding:5px 8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer">
-          <option value="1" ${p.skill===1?'selected':''}>1 · Beginner</option>
-          <option value="2" ${p.skill===2?'selected':''}>2 · Recreational</option>
-          <option value="3" ${p.skill===3?'selected':''}>3 · Intermediate</option>
-          <option value="4" ${p.skill===4?'selected':''}>4 · Advanced</option>
-          <option value="5" ${p.skill===5?'selected':''}>5 · Elite</option>
+          <option value="1" ${p.skill===1?'selected':''}>1 · E</option>
+          <option value="2" ${p.skill===2?'selected':''}>2 · D</option>
+          <option value="3" ${p.skill===3?'selected':''}>3 · C</option>
+          <option value="4" ${p.skill===4?'selected':''}>4 · B</option>
+          <option value="5" ${p.skill===5?'selected':''}>5 · A</option>
         </select>
         <button class="btn btn-xs btn-o" onclick="S.editingSkill=null;renderAllPlayers()">Cancel</button>
       </div>`:''}
