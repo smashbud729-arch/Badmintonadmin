@@ -16,7 +16,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
 <link rel="shortcut icon" href="/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -3040,7 +3040,25 @@ restoreExtra();        // restore sound, announcement, court nicknames
 initNewStateFields();  // ensure new state fields exist
 initAdvPanels();       // inject the 3 advanced matchmaking panel shells
 render();
-initSupabase();
+// Wait for Supabase CDN to be ready before initialising (retries for up to 5s)
+(function waitForSupabase(attempts){
+  const factory = (window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient
+    : (window.supabaseJs && window.supabaseJs.createClient)
+    ? window.supabaseJs.createClient
+    : null;
+  if(factory){
+    initSupabase();
+  } else if(attempts > 0){
+    syncStatus('busy','Connecting to Supabase…');
+    setTimeout(()=>waitForSupabase(attempts-1), 500);
+  } else {
+    syncStatus('err','CDN failed — check connection');
+    toast('⚠ Supabase CDN not loaded — check your internet and reload');
+    console.error('Supabase CDN unavailable after retries. window.supabase=',window.supabase);
+  }
+})(10); // 10 × 500ms = up to 5s
+
 if(_restored) toast('Session restored ✓ — welcome back!');
 // Register PWA service worker
 if('serviceWorker' in navigator){
