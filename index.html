@@ -851,6 +851,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div style="display:flex;align-items:center;gap:6px;margin-right:auto"><button class="btn btn-xs" id="theme-toggle-btn" onclick="toggleTheme()" style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--gr2);background:var(--b2);color:var(--gr4);cursor:pointer" title="Cycle themes: Light → Dark → Gold">🌙 Dark</button></div><div class="sync-actions">
     <button class="btn btn-o btn-xs" onclick="syncAll()" title="Force sync everything to database">↑ Sync Now</button>
     <button class="btn btn-o btn-xs" onclick="loadFromDB()" title="Reload data from database">↓ Load DB</button>
+    <button class="btn btn-o btn-xs" onclick="resumeSession()" title="Resume session from cloud backup on any device">☁ Resume</button>
     <button class="btn btn-xs" style="background:#FFE8EE;color:var(--pkd);border:1px solid var(--pkl)" onclick="if(confirm('Clear session data and start fresh?')){clearSession();location.reload()}" title="Clear saved session and refresh">✕ New Session</button>
     <button id="sound-btn" class="sound-btn on" onclick="toggleSound()" title="Toggle sound effects">🔔</button>
     <button class="btn btn-xs btn-o" onclick="openLuckyDraw()" title="Random fair team picker">🎲 Lucky</button>
@@ -1377,6 +1378,10 @@ function autoSave(){
     courtNicknames:S.courtNicknames||{},
     soundOn:S.soundOn!==false
   }));}catch(e){}
+  // Cloud backup when a named session is active (non-blocking)
+  if(S.manager&&S.manager.name){
+    cloudBackupSession().catch(()=>{});
+  }
 }
 
 /* ── Core helpers ── */
@@ -2781,6 +2786,172 @@ async function initSupabase(){
   }
   syncStatus('ok','Connected to Supabase ✓');
   toast('Supabase connected ✓');
+}
+
+/* ── Cloud Session Backup (disaster recovery / cross-device resume) ── */
+
+// Push full session snapshot to Supabase — called automatically when manager is active
+async function cloudBackupSession(){
+  // Only backup if manager session is active (name set)
+  if(!S.manager||!S.manager.name) return;
+  const sb=getSupabase();if(!sb)return;
+  const sid=await ensureSession();if(!sid)return;
+
+  // Build a slim snapshot: strip timer handles (not serialisable), keep everything else
+  const snap={
+    players: S.players.map(p=>({...p})),
+    queue: [...S.queue],
+    courts: S.courts.map(c=>({
+      id:c.id, courtMode:c.courtMode,
+      status: c.status==='playing'?'playing':'idle',
+      elapsed: c.elapsed||0,
+      match: c.match?{
+        team1: c.match.team1.map(p=>p.id),
+        team2: c.match.team2.map(p=>p.id),
+        score1: c.match.score1,
+        score2: c.match.score2,
+        mode: c.match.mode
+      }:null
+    })),
+    log: S.log,
+    nextId: S.nextId,
+    sugMode: S.sugMode,
+    manager: S.manager,
+    pay: S.pay,
+    queueSort: S.queueSort,
+    currentSessionId: sid,
+    advStates: ADV_STATES.map(st=>({
+      pool: st.pool,
+      teamA: st.teamA.map(p=>p.id),
+      teamB: st.teamB.map(p=>p.id),
+      mode: st.mode,
+      targetCourt: st.targetCourt
+    })),
+    savedAt: Date.now()
+  };
+
+  try{
+    // Upsert into session_state — one row per session_id
+    const res=await sb.from('session_state').upsert({
+      session_id: sid,
+      state_json: JSON.stringify(snap),
+      updated_at: new Date().toISOString()
+    },{onConflict:'session_id'});
+    if(res.error) console.warn('Cloud backup warning:',res.error.message);
+    else syncStatus('ok','☁ Backed up · '+new Date().toLocaleTimeString());
+  }catch(e){ console.warn('Cloud backup failed silently:',e); }
+}
+
+// Restore full session state from Supabase cloud backup
+async function resumeSession(){
+  const sb=getSupabase();
+  if(!sb){toast('⚠ Supabase not ready');return;}
+
+  // Ask for the session ID to resume (or use current one)
+  const inputId=prompt(
+    'Enter the Session ID to resume (leave blank to resume this device\'s current session):\n\n' +
+    'Find it in the top bar label or ask your manager.',
+    currentSessionId||''
+  );
+  if(inputId===null) return; // cancelled
+
+  const sid=(inputId.trim()||currentSessionId||'').trim();
+  if(!sid){toast('⚠ No session ID — start a session first');return;}
+
+  syncStatus('busy','Fetching cloud backup…');
+  try{
+    const res=await sb.from('session_state').select('state_json,updated_at').eq('session_id',sid).single();
+    if(res.error||!res.data){
+      toast('⚠ No cloud backup found for this session ID');
+      syncStatus('err','No backup found');
+      return;
+    }
+    const snap=JSON.parse(res.data.state_json);
+    const savedAt=new Date(snap.savedAt||res.data.updated_at).toLocaleTimeString();
+
+    if(!confirm(
+      `Restore session backup?\n\n` +
+      `Manager: ${snap.manager&&snap.manager.name||'Unknown'}\n` +
+      `Players: ${snap.players&&snap.players.length||0}\n` +
+      `Matches: ${snap.log&&snap.log.length||0}\n` +
+      `Last saved: ${savedAt}\n\n` +
+      `This will replace your current local session data.`
+    )) return;
+
+    // Apply the snapshot (same logic as restoreSession())
+    S.players  = snap.players  || [];
+    S.queue    = (snap.queue||[]).map(id=>Number(id));
+    S.log      = snap.log      || [];
+    S.nextId   = snap.nextId   || 1;
+    S.sugMode  = snap.sugMode  || 'doubles';
+    S.manager  = snap.manager  || {name:'',date:'',venue:''};
+    S.queueSort= snap.queueSort|| 'fairness';
+    S.pay      = snap.pay      || {};
+    currentSessionId = snap.currentSessionId || sid;
+
+    const qSet = new Set(S.queue);
+    S.players.forEach(p=>{
+      p.inQueue = qSet.has(Number(p.id));
+      p.onCourt = false;
+    });
+
+    // Restore courts
+    S.courts = (snap.courts||[]).map((c,i)=>({
+      id: c.id||i+1,
+      courtMode: c.courtMode||'doubles',
+      status: 'idle', match: null, elapsed: 0, timer: null
+    }));
+    (snap.courts||[]).forEach((sc,i)=>{
+      if(sc.status==='playing'&&sc.match){
+        const t1=(sc.match.team1||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+        const t2=(sc.match.team2||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+        if(t1.length&&t2.length){
+          S.courts[i].status='playing';
+          S.courts[i].elapsed=sc.elapsed||0;
+          S.courts[i].match={team1:t1,team2:t2,score1:sc.match.score1||0,score2:sc.match.score2||0,mode:sc.match.mode};
+          S.courts[i].timer=setInterval(()=>{S.courts[i].elapsed++;updateTimer(i)},1000);
+          [...t1,...t2].forEach(p=>{p.onCourt=true;p.inQueue=false});
+        }
+      }
+    });
+
+    // Restore manager display
+    if(S.manager.name){
+      document.getElementById('mgr-disp').textContent=S.manager.name;
+      if(S.manager.date){
+        const d=new Date(S.manager.date+'T00:00:00');
+        const ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        document.getElementById('mgr-date-disp').textContent=(S.manager.venue?S.manager.venue+' · ':'')+ds;
+      }
+      document.getElementById('mgr-date-inp').value=S.manager.date||'';
+      document.getElementById('mgr-venue-inp').value=S.manager.venue||'';
+    }
+
+    // Restore adv panels
+    if(snap.advStates){
+      snap.advStates.forEach((saved,i)=>{
+        if(!ADV_STATES[i]) return;
+        ADV_STATES[i].pool = saved.pool||'queue';
+        ADV_STATES[i].mode = saved.mode||'doubles';
+        ADV_STATES[i].targetCourt = saved.targetCourt!=null?saved.targetCourt:null;
+        ADV_STATES[i].teamA = (saved.teamA||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+        ADV_STATES[i].teamB = (saved.teamB||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+      });
+    }
+
+    const n=S.courts.length;
+    document.querySelectorAll('.cb').forEach((b,i)=>b.classList.toggle('active',i===n-1));
+
+    render();
+    renderPayment();
+    autoSave(); // save to localStorage too
+    syncStatus('ok','☁ Session restored from cloud ✓');
+    toast(`✓ Session restored! ${S.players.length} players, ${S.log.length} matches, ${S.courts.length} courts`);
+  }catch(e){
+    syncStatus('err','Restore failed');
+    toast('⚠ Resume failed — check console');
+    console.error('resumeSession error:',e);
+  }
 }
 
 
