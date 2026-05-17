@@ -31,7 +31,7 @@
   --bam:#4A7C59;--baml:#6AAB7E;
 }
 /* Dark mode (Anya theme) */
-:root[data-theme="dark"],
+[data-theme="dark"]:root,
 [data-theme="dark"] {
   --pk:#E8537A;--pkl:#F2879E;--pkd:#C0365A;--pkg:#E8537A15;
   --b:#0D0D0D;--b2:#161616;--b3:#1E1E1E;--b4:#282828;
@@ -62,8 +62,8 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .hs-l{font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em}
 
 /* Modal */
-.backdrop{display:none;position:fixed;inset:0;background:#3D1A2580;z-index:200;align-items:center;justify-content:center;pointer-events:none}
-.backdrop.open{display:flex;pointer-events:auto}
+.backdrop{display:none;position:fixed;inset:0;background:#3D1A2580;z-index:200;align-items:center;justify-content:center}
+.backdrop.open{display:flex}
 .modal{background:var(--b2);border:1.5px solid var(--pkl);border-radius:12px;padding:22px;width:360px;max-width:95vw}
 .modal-ttl{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--pk);letter-spacing:0.08em;margin-bottom:14px}
 
@@ -463,11 +463,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .info-note{font-size:10px;color:var(--gr4);background:var(--b3);border:1px solid var(--gr2);border-radius:4px;padding:5px 10px;margin-bottom:10px}
 .info-note b{color:var(--pk)}
 /* Supabase sync bar */
-.sync-bar{display:flex;align-items:center;gap:6px;padding:3px 14px;background:var(--b3);border-bottom:1px solid var(--gr);flex-shrink:0;min-height:22px;overflow-x:auto;white-space:nowrap;position:relative;z-index:1}
+.sync-bar{display:flex;align-items:center;gap:6px;padding:3px 14px;background:var(--b3);border-bottom:1px solid var(--gr);flex-shrink:0;min-height:22px;overflow-x:auto;white-space:nowrap}
 .sync-bar::-webkit-scrollbar{display:none}
-.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--gr3);flex-shrink:0;transition:background 0.3s;pointer-events:none}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--gr3);flex-shrink:0;transition:background 0.3s}
 .sync-dot.ok{background:#3DA06A}.sync-dot.err{background:var(--pk)}
-.sync-dot.busy{background:var(--pk);animation:sbpulse 0.8s infinite alternate;pointer-events:none}
+.sync-dot.busy{background:var(--pk);animation:sbpulse 0.8s infinite alternate}
 @keyframes sbpulse{from{opacity:0.3}to{opacity:1}}
 .sync-lbl{font-size:9px;color:var(--gr4);letter-spacing:0.05em}
 .sync-actions{margin-left:auto;display:flex;gap:6px}
@@ -1242,9 +1242,9 @@ function applyTheme(theme){
   const btn = document.getElementById('theme-toggle-btn');
   const hdrMascot = document.getElementById('header-mascot');
   if(theme === 'dark'){
-    if(btn) btn.textContent = '⚡ Gold';
+    if(btn) btn.textContent = '⚡ Whack';
     if(hdrMascot) hdrMascot.src = ANYA_AV;
-  } else if(theme === 'gold'){
+  } else if(theme === 'whack'){
     if(btn) btn.textContent = '☀ Light';
     if(hdrMascot) hdrMascot.src = WHACK_UAE;
   } else {
@@ -1257,7 +1257,7 @@ function applyTheme(theme){
 function toggleTheme(){
   const current = document.documentElement.getAttribute('data-theme') || 'light';
   if(current === 'light') applyTheme('dark');
-  else if(current === 'dark') applyTheme('gold');
+  else if(current === 'dark') applyTheme('whack');
   else applyTheme('light');
 }
 
@@ -2488,15 +2488,12 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 let _supabase = null;
 function getSupabase(){
   if(_supabase) return _supabase;
-  // Try all known global paths the CDN may expose (v2 UMD)
-  let factory = null;
-  if(window.supabase && typeof window.supabase.createClient === 'function'){
-    factory = window.supabase.createClient;
-  } else if(window.supabaseJs && typeof window.supabaseJs.createClient === 'function'){
-    factory = window.supabaseJs.createClient;
-  } else if(window.supabase && window.supabase.default && typeof window.supabase.default.createClient === 'function'){
-    factory = window.supabase.default.createClient;
-  }
+  // Try all known global paths the CDN may expose
+  const factory = (window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient
+    : (window.supabaseJs && window.supabaseJs.createClient)
+    ? window.supabaseJs.createClient
+    : null;
   if(factory){
     _supabase = factory(SB_URL, SB_KEY);
     return _supabase;
@@ -2688,17 +2685,10 @@ async function syncAll(){
 
 /* ── DB hooks are called directly from the core functions ── */
 
-async function initSupabase(retryCount){
+async function initSupabase(){
   syncStatus('busy','Connecting…');
   const sb=getSupabase();
-  if(!sb){
-    // Retry once after 1 second in case CDN is still loading
-    if(!retryCount){
-      setTimeout(()=>initSupabase(1), 1000);
-      return;
-    }
-    syncStatus('err','Supabase CDN failed');toast('⚠ Supabase CDN not loaded');return;
-  }
+  if(!sb){syncStatus('err','Supabase CDN failed');toast('⚠ Supabase CDN not loaded');return;}
   const res=await sb.from('players').select('id').limit(1);
   if(res.error){
     syncStatus('err','DB error: '+res.error.message);
@@ -2709,18 +2699,6 @@ async function initSupabase(retryCount){
   syncStatus('ok','Connected to Supabase ✓');
   toast('Supabase connected ✓');
 }
-
-/* ── Click-outside & Escape-key closes any open backdrop ── */
-document.addEventListener('click', function(e){
-  if(e.target.classList.contains('backdrop') && e.target.classList.contains('open')){
-    e.target.classList.remove('open');
-  }
-});
-document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape'){
-    document.querySelectorAll('.backdrop.open').forEach(b => b.classList.remove('open'));
-  }
-});
 
 
 /* ════════════════════════════════════════════════════
