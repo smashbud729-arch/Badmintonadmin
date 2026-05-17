@@ -2945,8 +2945,7 @@ function shareWhatsApp(){
     sessionSection=`
 --------------------
 *Session Results:*
-${sessionLines.join('
-')}`;
+${sessionLines.join('\n')}`;
   }
 
   // Player of the Day (text label, no emoji)
@@ -2957,8 +2956,7 @@ ${sessionLines.join('
   const msg=`${header}
 ${date}${venue}
 *Overall Rankings:*
-${overallLines.join('
-')}${sessionSection}${potdLine}
+${overallLines.join('\n')}${sessionSection}${potdLine}
 
 [Whack] Badminton Queue Manager`;
 
