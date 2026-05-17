@@ -2511,8 +2511,8 @@ function renderLeaderboard(){
       sStat.innerHTML = potdHtml+`
         <div class="stat-c"><div class="stat-v">${totalMatches}</div><div class="stat-l">Matches</div></div>
         <div class="stat-c"><div class="stat-v">${totalPlayers}</div><div class="stat-l">Players</div></div>
-        <div class="stat-c"><div class="stat-v" style="font-size:14px">${topSession?topSession.name.split(' ')[0]:'—'}</div><div class="stat-l">Best Win %</div></div>
-        <div class="stat-c"><div class="stat-v" style="font-size:14px">${mostActive?mostActive.name.split(' ')[0]:'—'}</div><div class="stat-l">Most Active</div></div>`
+        <div class="stat-c"><div class="stat-v" style="font-size:20px">${topSession?topSession.name.split(' ')[0]:'—'}</div><div class="stat-l">Best Win %</div></div>
+        <div class="stat-c"><div class="stat-v" style="font-size:20px">${mostActive?mostActive.name.split(' ')[0]:'—'}</div><div class="stat-l">Most Active</div></div>`
         +rivalHtml;
     }
 
@@ -3009,39 +3009,49 @@ function getRivalries(){
 function shareWhatsApp(){
   const allRanked=[...S.players].filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a)||b.wins-a.wins).slice(0,5);
   if(!allRanked.length){toast('No stats to share yet');return;}
-  // Safe text labels instead of medal emojis (avoid ? on some Android WhatsApp versions)
-  const ranks=['(1)','(2)','(3)','(4)','(5)'];
+  const ranks=['\u{1F947}','\u{1F948}','\u{1F949}','(4)','(5)'];
   const mgr=S.manager;
   const header=mgr.name?`*${mgr.name}'s Whack Session*`:'*Whack Session Results*';
   const date=mgr.date?`Date: ${new Date(mgr.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} `:'';
-  const venue=mgr.venue?`Venue: ${mgr.venue}
-`:'';
+  const venue=mgr.venue?`Venue: ${mgr.venue}\n`:'';
 
-  // Overall leaderboard (top 5 by win rate)
+  // 1. Overall leaderboard (top 5 by all-time win rate)
   const overallLines=allRanked.map((p,i)=>`${ranks[i]} ${p.name} - ${wr(p)}% WR (${p.wins}W/${p.losses}L)`);
 
-  // Session results (players with session wins, sorted by session wins)
-  const sessionRanked=[...S.players].filter(p=>p.sessionWins>0).sort((a,b)=>b.sessionWins-a.sessionWins).slice(0,5);
+  // 2. Session leaderboard — computed from match log (same as renderLeaderboard)
+  const sessionStats={};
+  S.log.forEach(entry=>{
+    const winnerNames=entry.winner.split(' & ');
+    [...entry.t1.split(' & '),...entry.t2.split(' & ')].forEach(name=>{
+      if(!sessionStats[name]) sessionStats[name]={wins:0,losses:0,matches:0};
+      sessionStats[name].matches++;
+      if(winnerNames.includes(name)) sessionStats[name].wins++;
+      else sessionStats[name].losses++;
+    });
+  });
+  const sessionRanked=S.players
+    .filter(p=>sessionStats[p.name])
+    .map(p=>({...p,sWins:sessionStats[p.name].wins,sLosses:sessionStats[p.name].losses,sMatches:sessionStats[p.name].matches}))
+    .sort((a,b)=>{
+      const wrA=a.sMatches?Math.round(a.sWins/a.sMatches*100):0;
+      const wrB=b.sMatches?Math.round(b.sWins/b.sMatches*100):0;
+      return wrB-wrA||b.sWins-a.sWins;
+    }).slice(0,5);
+
   let sessionSection='';
   if(sessionRanked.length){
-    const sessionLines=sessionRanked.map((p,i)=>`${ranks[i]} ${p.name} - ${p.sessionWins} wins this session`);
-    sessionSection=`
---------------------
-*Session Results:*
-${sessionLines.join('\n')}`;
+    const sessionLines=sessionRanked.map((p,i)=>{
+      const swr=p.sMatches?Math.round(p.sWins/p.sMatches*100):0;
+      return `${ranks[i]} ${p.name} - ${swr}% WR (${p.sWins}W/${p.sLosses}L this session)`;
+    });
+    sessionSection=`\n--------------------\n\u{1F3F8} *Session Results:*\n${sessionLines.join('\n')}`;
   }
 
-  // Player of the Day (text label, no emoji)
+  // 3. Player of the Day
   const potd=getPlayerOfDay();
-  const potdLine=potd?`
-[POTD] Player of the Day: *${potd.player.name}* (${potd.sessionWins} session wins)`:'';
+  const potdLine=potd?`\n\u{1F3C5} Player of the Day: *${potd.player.name}* (${potd.sessionWins} session wins)`:'';
 
-  const msg=`${header}
-${date}${venue}
-*Overall Rankings:*
-${overallLines.join('\n')}${sessionSection}${potdLine}
-
-[Whack] Badminton Queue Manager`;
+  const msg=`${header}\n${date}${venue}\n\u{1F3C6} *Overall Rankings:*\n${overallLines.join('\n')}${sessionSection}${potdLine}\n\n[Whack] Badminton Queue Manager`;
 
   const url='https://wa.me/?text='+encodeURIComponent(msg);
   window.open(url,'_blank');
