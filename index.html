@@ -2615,6 +2615,8 @@ async function ensureSession(){
   if(error){console.error('Session error:',error);syncStatus('err','Session failed: '+error.message);return null;}
   currentSessionId=data[0].id;
   syncStatus('ok','Session active · '+currentSessionId.slice(0,8));
+  // Show full session ID in a clickable element for easy sharing
+  _updateSessionIdDisplay();
   return currentSessionId;
 }
 
@@ -2843,40 +2845,116 @@ async function cloudBackupSession(){
 }
 
 // Restore full session state from Supabase cloud backup
+// Show/update the session ID display badge in the sync bar
+function _updateSessionIdDisplay(){
+  let badge=document.getElementById('session-id-badge');
+  if(!currentSessionId){
+    if(badge) badge.style.display='none';
+    return;
+  }
+  if(!badge){
+    // Create it once
+    const lbl=document.getElementById('sync-lbl');
+    if(!lbl) return;
+    badge=document.createElement('span');
+    badge.id='session-id-badge';
+    badge.style.cssText='font-size:9px;color:var(--pk);font-weight:700;cursor:pointer;letter-spacing:0.04em;margin-left:4px;text-decoration:underline dotted';
+    badge.title='Tap to copy Session ID for sharing';
+    badge.onclick=()=>{
+      navigator.clipboard.writeText(currentSessionId).then(()=>{
+        toast('📋 Session ID copied! Share this with your team to resume on another device.');
+      }).catch(()=>{
+        prompt('Copy this Session ID:',currentSessionId);
+      });
+    };
+    lbl.parentNode.insertBefore(badge,lbl.nextSibling);
+  }
+  badge.textContent='ID: '+currentSessionId.slice(0,12)+'…';
+  badge.style.display='';
+}
+
 async function resumeSession(){
   const sb=getSupabase();
   if(!sb){toast('⚠ Supabase not ready');return;}
 
-  // Ask for the session ID to resume (or use current one)
-  const inputId=prompt(
-    'Enter the Session ID to resume (leave blank to resume this device\'s current session):\n\n' +
-    'Find it in the top bar label or ask your manager.',
-    currentSessionId||''
-  );
-  if(inputId===null) return; // cancelled
+  // Show a modal with recent sessions from Supabase to pick from
+  syncStatus('busy','Loading recent sessions…');
+  let sessions=[];
+  try{
+    const res=await sb.from('session_state')
+      .select('session_id,state_json,updated_at')
+      .order('updated_at',{ascending:false})
+      .limit(10);
+    if(!res.error&&res.data) sessions=res.data;
+  }catch(e){}
+  syncStatus('ok','Connected to Supabase ✓');
 
-  const sid=(inputId.trim()||currentSessionId||'').trim();
-  if(!sid){toast('⚠ No session ID — start a session first');return;}
+  if(sessions.length===0&&!currentSessionId){
+    toast('⚠ No cloud backups found. Start a session first.');
+    return;
+  }
+
+  // Build a pick-list modal
+  const existing=document.getElementById('resume-modal-backdrop');
+  if(existing) existing.remove();
+
+  const backdrop=document.createElement('div');
+  backdrop.id='resume-modal-backdrop';
+  backdrop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  let rows='';
+  sessions.forEach((s,i)=>{
+    let managerName='Unknown';
+    let playerCount=0;
+    let matchCount=0;
+    let savedAt='';
+    try{
+      const snap=JSON.parse(s.state_json);
+      managerName=(snap.manager&&snap.manager.name)||'Unknown';
+      playerCount=(snap.players&&snap.players.length)||0;
+      matchCount=(snap.log&&snap.log.length)||0;
+      savedAt=new Date(snap.savedAt||s.updated_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    }catch(e){}
+    const isCurrent=s.session_id===currentSessionId;
+    rows+=`<div onclick="window._doResume('${s.session_id}')" style="padding:12px 14px;border-radius:8px;border:1.5px solid ${isCurrent?'var(--pk)':'var(--gr)'};background:var(--b2);cursor:pointer;margin-bottom:8px;transition:border 0.15s" onmouseenter="this.style.borderColor='var(--pk)'" onmouseleave="this.style.borderColor='${isCurrent?'var(--pk)':'var(--gr)'}'">
+      <div style="font-weight:700;font-size:14px;color:var(--w)">${managerName}${isCurrent?' <span style=\'font-size:10px;color:var(--pk)\'>← this device</span>':''}</div>
+      <div style="font-size:11px;color:var(--gr4);margin-top:2px">${playerCount} players · ${matchCount} matches · ${savedAt}</div>
+      <div style="font-size:9px;color:var(--gr3);margin-top:3px;font-family:monospace">${s.session_id.slice(0,20)}…</div>
+    </div>`;
+  });
+
+  if(sessions.length===0){
+    rows=`<div style="color:var(--gr4);font-size:13px;text-align:center;padding:20px">No cloud backups found yet.<br>Backups are saved automatically once a manager session starts.</div>`;
+  }
+
+  backdrop.innerHTML=`
+    <div style="background:var(--b);border-radius:14px;padding:22px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;border:1px solid var(--gr)">
+      <div style="font-weight:800;font-size:17px;margin-bottom:6px;color:var(--w)">☁ Resume Session</div>
+      <div style="font-size:12px;color:var(--gr4);margin-bottom:16px">Pick a session to restore on this device. All players, courts, and match history will be loaded.</div>
+      ${rows}
+      <button onclick="document.getElementById('resume-modal-backdrop').remove()" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid var(--gr);background:var(--b2);color:var(--gr4);cursor:pointer;font-size:13px">Cancel</button>
+    </div>`;
+
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click',e=>{if(e.target===backdrop)backdrop.remove();});
+}
+
+// Called when user picks a session from the resume modal
+window._doResume=async function(sid){
+  document.getElementById('resume-modal-backdrop')?.remove();
+  const sb=getSupabase();
+  if(!sb){toast('⚠ Supabase not ready');return;}
 
   syncStatus('busy','Fetching cloud backup…');
   try{
     const res=await sb.from('session_state').select('state_json,updated_at').eq('session_id',sid).single();
     if(res.error||!res.data){
-      toast('⚠ No cloud backup found for this session ID');
+      toast('⚠ No cloud backup found for this session');
       syncStatus('err','No backup found');
       return;
     }
     const snap=JSON.parse(res.data.state_json);
     const savedAt=new Date(snap.savedAt||res.data.updated_at).toLocaleTimeString();
-
-    if(!confirm(
-      `Restore session backup?\n\n` +
-      `Manager: ${snap.manager&&snap.manager.name||'Unknown'}\n` +
-      `Players: ${snap.players&&snap.players.length||0}\n` +
-      `Matches: ${snap.log&&snap.log.length||0}\n` +
-      `Last saved: ${savedAt}\n\n` +
-      `This will replace your current local session data.`
-    )) return;
 
     // Apply the snapshot (same logic as restoreSession())
     S.players  = snap.players  || [];
@@ -2945,12 +3023,13 @@ async function resumeSession(){
     render();
     renderPayment();
     autoSave(); // save to localStorage too
-    syncStatus('ok','☁ Session restored from cloud ✓');
+    _updateSessionIdDisplay();
+    syncStatus('ok','\u2601 Session restored from cloud ✓');
     toast(`✓ Session restored! ${S.players.length} players, ${S.log.length} matches, ${S.courts.length} courts`);
   }catch(e){
     syncStatus('err','Restore failed');
     toast('⚠ Resume failed — check console');
-    console.error('resumeSession error:',e);
+    console.error('_doResume error:',e);
   }
 }
 
