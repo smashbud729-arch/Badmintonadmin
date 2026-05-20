@@ -802,6 +802,28 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 /* Rivalry tracker */
 .rivalry-chip{background:var(--b3);border:1px solid var(--pkl);border-radius:6px;padding:7px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:11px}
 
+/* ── MMR Tier Badges ── */
+.mmr-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:0.04em;text-transform:uppercase;flex-shrink:0}
+.mmr-bronze  {background:#3D2400;color:#CD7F32;border:1px solid #8B5513}
+.mmr-silver  {background:#1A1A2A;color:#C0C0C0;border:1px solid #808080}
+.mmr-gold    {background:#2A2000;color:#FFD700;border:1px solid #B8860B}
+.mmr-platinum{background:#002020;color:#00E5CC;border:1px solid #008080}
+.mmr-diamond {background:#001030;color:#5BE5FF;border:1px solid #0080CC}
+.mmr-epic    {background:#200030;color:#CC80FF;border:1px solid #7B2FBE}
+.mmr-legend  {background:#300010;color:#FF6060;border:1px solid #CC2020}
+.mmr-mythic  {background:#1A0800;color:#FF9900;border:1px solid #CC6600;animation:mythic-glow 2s ease-in-out infinite}
+@keyframes mythic-glow{0%,100%{box-shadow:0 0 4px #FF990055}50%{box-shadow:0 0 10px #FF9900AA}}
+.mmr-delta-pos{font-size:10px;font-weight:700;color:#3DA06A}
+.mmr-delta-neg{font-size:10px;font-weight:700;color:#E8537A}
+.lb-mmr{width:56px;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--pk);flex-shrink:0}
+[data-theme="dark"] .mmr-bronze{background:#2A1800}
+[data-theme="dark"] .mmr-gold{background:#1A1400}
+[data-theme="dark"] .mmr-platinum{background:#001A1A}
+[data-theme="dark"] .mmr-diamond{background:#000A20}
+[data-theme="dark"] .mmr-epic{background:#150020}
+[data-theme="dark"] .mmr-legend{background:#200008}
+[data-theme="dark"] .mmr-mythic{background:#120500}
+
 </style>
 </head>
 <body>
@@ -910,6 +932,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
         <button class="sort-btn" data-sort="winpct" onclick="setQueueSort('winpct')">Win %</button>
         <button class="sort-btn" data-sort="matches" onclick="setQueueSort('matches')">Matches</button>
         <button class="sort-btn" data-sort="gender" onclick="setQueueSort('gender')">Gender</button>
+        <button class="sort-btn" data-sort="mmr" onclick="setQueueSort('mmr')">MMR</button>
       </div>
       <div class="info-note">Players who <b>just finished</b> are shown with a "Just played" tag and deprioritised by the algorithm — giving everyone a fair turn.</div>
       <div class="slist" id="queue-list"></div>
@@ -1027,7 +1050,21 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
   <!-- Overall Rankings -->
   <div id="lb-overall-panel">
-    <div style="font-size:10px;color:var(--gr4);margin-bottom:10px">All-time stats across every session stored in the database.</div>
+    <div style="font-size:10px;color:var(--gr4);margin-bottom:10px">All-time stats across every session stored in the database. Rankings are sorted by MMR.</div>
+    <!-- MMR Tier Key -->
+    <div style="background:var(--b2);border:1px solid var(--gr);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--pk);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px">MMR Tier Guide</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        <span class="mmr-badge mmr-bronze">🥉 Bronze <span style="font-weight:400;margin-left:3px">0–500</span></span>
+        <span class="mmr-badge mmr-silver">🥈 Silver <span style="font-weight:400;margin-left:3px">501–1000</span></span>
+        <span class="mmr-badge mmr-gold">🥇 Gold <span style="font-weight:400;margin-left:3px">1001–1500</span></span>
+        <span class="mmr-badge mmr-platinum">🔵 Platinum <span style="font-weight:400;margin-left:3px">1501–2000</span></span>
+        <span class="mmr-badge mmr-diamond">🔷 Diamond <span style="font-weight:400;margin-left:3px">2001–2500</span></span>
+        <span class="mmr-badge mmr-epic">⚡ Epic <span style="font-weight:400;margin-left:3px">2501–3000</span></span>
+        <span class="mmr-badge mmr-legend">💎 Legend <span style="font-weight:400;margin-left:3px">3001–3500</span></span>
+        <span class="mmr-badge mmr-mythic">👑 Mythic <span style="font-weight:400;margin-left:3px">3501+</span></span>
+      </div>
+    </div>
     <div id="lb-list"></div>
   </div>
 
@@ -1211,15 +1248,8 @@ function restoreSession(){
       localStorage.removeItem(LS_KEY);
       return false;
     }
-    S.players  = snap.players  || [];
+    S.players  = (snap.players||[]).map(p=>({mmr:1000,...p}));
     S.queue    = (snap.queue||[]).map(id=>Number(id));
-    S.log      = snap.log      || [];
-    S.nextId   = snap.nextId   || 1;
-    S.sugMode  = snap.sugMode  || 'doubles';
-    S.manager  = snap.manager  || {name:'',date:'',venue:''};
-    S.queueSort= snap.queueSort|| 'fairness';
-    S.pay      = snap.pay      || {};
-    currentSessionId = snap.currentSessionId || null;
 
     // Reconcile inQueue flag with S.queue array (source of truth)
     // This prevents stale flags causing payment/queue display bugs
@@ -1788,6 +1818,7 @@ function sortedQueue(pool){
     case 'winpct':  return arr.sort((a,b)=>wr(b)-wr(a)||b.matches-a.matches);
     case 'skill':   return arr.sort((a,b)=>b.skill-a.skill||a.name.localeCompare(b.name));
     case 'gender':  return arr.sort((a,b)=>a.gender.localeCompare(b.gender)||a.name.localeCompare(b.name));
+    case 'mmr':     return arr.sort((a,b)=>(b.mmr||1000)-(a.mmr||1000));
     default:        return arr.sort((a,b)=>fairScore(b)-fairScore(a));
   }
 }
@@ -1817,7 +1848,7 @@ function renderAllPlayers(){
           <div style="flex:1;min-width:0">
             <div class="pl-name" style="white-space:normal;word-break:break-word">${p.name}</div>
             <div class="pl-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              ${p.gender==='F'?'♀':'♂'} · ${p.wins}W ${p.losses}L · ${wr(p)}% · ${SKILL_N[p.skill]}
+              ${p.gender==='F'?'♀':'♂'} · ${p.wins}W ${p.losses}L · ${wr(p)}% · ${SKILL_N[p.skill]} · ${p.mmr||1000} MMR
             </div>
           </div>
           <div class="sk ${SKILL_C[p.skill]}" style="flex-shrink:0">${SKILL_N[p.skill]}</div>
@@ -1920,12 +1951,17 @@ function endMatch(ci,winner){
   const winners=winner===1?m.team1:m.team2,losers=winner===1?m.team2:m.team1;
   winners.forEach(p=>{p.wins++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
   losers.forEach(p=>{p.losses++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
+
+  // ── MMR calculation (runs after wins/losses are updated) ──
+  const mmrDeltas = calcMMR(winners, losers, m.score1, m.score2);
+
   const entry={
     time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
     mode:m.mode,court:court.id,duration:fmtTime(court.elapsed),
     t1:m.team1.map(p=>p.name).join(' & '),t2:m.team2.map(p=>p.name).join(' & '),
     s1:m.score1,s2:m.score2,
-    winner:winner===1?m.team1.map(p=>p.name).join(' & '):m.team2.map(p=>p.name).join(' & ')
+    winner:winner===1?m.team1.map(p=>p.name).join(' & '):m.team2.map(p=>p.name).join(' & '),
+    mmrDeltas: mmrDeltas
   };
   const elapsedSnap=court.elapsed;
   S.log.unshift(entry);
@@ -2171,7 +2207,7 @@ function addPlayer(){
   const name=document.getElementById('p-name').value.trim();
   if(!name){toast('Enter a player name');return}
   const p={id:S.nextId++,name,gender:document.getElementById('p-gender').value,skill:parseInt(document.getElementById('p-skill').value),
-    mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,inQueue:true,onCourt:false,lastMatchAt:-99,queueCount:1};
+    mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,mmr:1000,inQueue:true,onCourt:false,lastMatchAt:-99,queueCount:1};
   S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
   document.getElementById('p-name').value='';
   toast(p.name+' added to session');render();autoSave();
@@ -2332,8 +2368,9 @@ function renderQueueList(){
       <div class="q-pos">${i+1}</div>${avHtml(p)}
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${tBadge}${recentBadge}${gcBadge}${streakBadge}${formDots}</div>
-        <div class="pl-meta">${p.gender==='F'?'Female':'Male'} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR</div>
+        <div class="pl-meta">${p.gender==='F'?'Female':'Male'} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR · ${p.mmr||1000} MMR</div>
       </div>
+      ${mmrBadgeHtml(p.mmr||1000)}
       <div class="sk ${SKILL_C[p.skill]}">${SKILL_N[p.skill]}</div>
       <button class="btn btn-red btn-xs" onclick="event.stopPropagation();removeFromQueue(${p.id})" style="margin-left:5px">Remove</button>
     </div>`;
@@ -2393,9 +2430,11 @@ function setLbTab(tab){
 function lbRowHtml(p, i, wins, losses, matches, extra){
   const rate = matches ? Math.round(wins/matches*100) : 0;
   const rc = ['r1','r2','r3'][i]||'rn';
+  const tier = mmrTier(p.mmr||1000);
   return `<div class="lb-row">
     <div class="lb-rank ${rc}">${i+1}</div>${avHtml(p,26)}
     <div class="lb-name">${p.name}<br><span style="font-size:9px;color:var(--gr4)">${SKILL_N[p.skill]}${extra?` · ${extra}`:''}</span></div>
+    <div style="flex-shrink:0">${mmrBadgeHtml(p.mmr||1000)}</div>
     <div class="lb-stat">${matches}G</div>
     <div class="lb-stat">${wins}W/${losses}L</div>
     <div class="lb-wr">${rate}%</div>
@@ -2420,7 +2459,7 @@ function renderLeaderboard(){
   if(lbTab === 'overall'){
     const lb = document.getElementById('lb-list');
     if(!lb) return;
-    const ranked = [...S.players].filter(p=>p.matches>0).sort((a,b)=>wr(b)-wr(a)||b.wins-a.wins);
+    const ranked = [...S.players].filter(p=>p.matches>0).sort((a,b)=>(b.mmr||1000)-(a.mmr||1000)||wr(b)-wr(a)||b.wins-a.wins);
     const improved = getMostImproved();
     // Banner for most improved
     const banner = improved
@@ -2437,12 +2476,17 @@ function renderLeaderboard(){
             ?`<span style="font-size:9px;background:#E8F8EE;color:#2E7D52;border:1px solid #9ED4B8;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px">📈 Most Improved</span>`:''
           const qCount = getQueueCount(p);
           const qBadge = qCount>0?`<span style="font-size:9px;color:var(--gr4)"> · queued ${qCount}×</span>`:'';
+          const tier = mmrTier(p.mmr||1000);
           return `<div class="lb-row">
             <div class="lb-rank ${['r1','r2','r3'][i]||'rn'}">${i+1}</div>
             ${avHtml(p,26)}
             <div class="lb-name">
               <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">${p.name}${streakBadge}${improvedBadge}</div>
               <div style="font-size:9px;color:var(--gr4)">${SKILL_N[p.skill]}${qBadge}</div>
+            </div>
+            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              ${mmrBadgeHtml(p.mmr||1000)}
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--pk)">${p.mmr||1000} MMR</span>
             </div>
             <div class="lb-stat">${p.matches}G</div>
             <div class="lb-stat">${p.wins}W/${p.losses}L</div>
@@ -2624,7 +2668,7 @@ async function ensureSession(){
 async function dbSavePlayer(p){
   const sb=getSupabase();if(!sb)return;
   syncStatus('busy','Saving player…');
-  const row={name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,wins:p.wins,losses:p.losses,matches:p.matches};
+  const row={name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,wins:p.wins,losses:p.losses,matches:p.matches,mmr:p.mmr||1000};
   let res;
   if(p.dbId){
     res=await sb.from('players').update(row).eq('id',p.dbId).select();
@@ -2638,7 +2682,7 @@ async function dbSavePlayer(p){
 
 async function dbUpdatePlayerStats(p){
   const sb=getSupabase();if(!sb||!p.dbId)return;
-  const res=await sb.from('players').update({wins:p.wins,losses:p.losses,matches:p.matches}).eq('id',p.dbId);
+  const res=await sb.from('players').update({wins:p.wins,losses:p.losses,matches:p.matches,mmr:p.mmr||1000}).eq('id',p.dbId);
   if(res.error) console.error('Stats update error:',res.error);
   else syncStatus('ok','Stats updated ✓');
 }
@@ -2710,6 +2754,7 @@ async function loadFromDB(){
             id:S.nextId++,dbId:row.id,
             name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',
             wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,
+            mmr:row.mmr||1000,
             inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0
           });
           added++;
@@ -2957,7 +3002,7 @@ window._doResume=async function(sid){
     const savedAt=new Date(snap.savedAt||res.data.updated_at).toLocaleTimeString();
 
     // Apply the snapshot (same logic as restoreSession())
-    S.players  = snap.players  || [];
+    S.players  = (snap.players||[]).map(p=>({mmr:1000,...p}));
     S.queue    = (snap.queue||[]).map(id=>Number(id));
     S.log      = snap.log      || [];
     S.nextId   = snap.nextId   || 1;
@@ -3118,9 +3163,20 @@ function showMatchRecap(entry,courtId,elapsed){
   }
   if(S.log.length===1)funStat='🏸 First match of the session!';
   document.getElementById('recap-fun-stat').textContent=funStat;
-  // Streak stats
-  const statsHtml=winTeam.map(p=>{const s=getWinStreak(p);return s>=2?`<div style="font-size:11px;color:var(--pk);font-weight:600">🔥 ${p.name}: ${s} streak</div>`:''}).filter(Boolean).join('');
-  document.getElementById('recap-stats').innerHTML=statsHtml||'';
+  // Streak + MMR delta stats
+  const streakLines=winTeam.map(p=>{const s=getWinStreak(p);return s>=2?`<div style="font-size:11px;color:var(--pk);font-weight:600">🔥 ${p.name}: ${s} streak</div>`:''}).filter(Boolean);
+  const mmrLines=(entry.mmrDeltas||[]).map(d=>{
+    const p=S.players.find(x=>x.id===d.id);
+    const tier=mmrTier(p?p.mmr:1000);
+    const sign=d.delta>0?'+':'';
+    const cls=d.delta>0?'mmr-delta-pos':'mmr-delta-neg';
+    return `<div style="display:flex;align-items:center;gap:5px;font-size:11px">
+      <span style="font-weight:600;color:var(--w)">${d.name}</span>
+      <span class="${cls}">${sign}${d.delta} MMR</span>
+      ${mmrBadgeHtml(p?p.mmr:1000)}
+    </div>`;
+  });
+  document.getElementById('recap-stats').innerHTML=[...streakLines,...mmrLines].join('')||'';
   bd.classList.add('open');
 }
 function closeRecapModal(){document.getElementById('recap-modal-backdrop').classList.remove('open');}
@@ -3266,7 +3322,10 @@ function shareWhatsApp(){
   const venue=mgr.venue?`Venue: ${mgr.venue}\n`:'';
 
   // 1. Overall leaderboard (top 5 by all-time win rate)
-  const overallLines=allRanked.map((p,i)=>`${ranks[i]} ${p.name} - ${wr(p)}% WR (${p.wins}W/${p.losses}L)`);
+  const overallLines=allRanked.map((p,i)=>{
+    const t=mmrTier(p.mmr||1000);
+    return `${ranks[i]} ${p.name} [${t.name}·${p.mmr||1000}] - ${wr(p)}% WR (${p.wins}W/${p.losses}L)`;
+  });
 
   // 2. Session leaderboard — computed from match log (same as renderLeaderboard)
   const sessionStats={};
@@ -3347,7 +3406,100 @@ function detectUpset(entry){
   return avgWinSkill<avgLoseSkill-0.5;
 }
 
-/* ── INIT new state fields on restore ── */
+/* ══════════════════════════════════════════
+   MMR ENGINE — Elo-style with K scaling
+   ══════════════════════════════════════════
+
+   Tiers:
+   Bronze   0–500    Beginner
+   Silver   501–1000 Advanced Beginner
+   Gold     1001–1500 Intermediate
+   Platinum 1501–2000 High Intermediate
+   Diamond  2001–2500 Advanced
+   Epic     2501–3000 Semi-Pro / Regional Expert
+   Legend   3001–3500 Elite
+   Mythic   3501+    Professional / World Tour
+*/
+
+const MMR_TIERS=[
+  {name:'Mythic',  min:3501, cls:'mmr-mythic',   icon:'👑'},
+  {name:'Legend',  min:3001, cls:'mmr-legend',   icon:'💎'},
+  {name:'Epic',    min:2501, cls:'mmr-epic',     icon:'⚡'},
+  {name:'Diamond', min:2001, cls:'mmr-diamond',  icon:'🔷'},
+  {name:'Platinum',min:1501, cls:'mmr-platinum', icon:'🔵'},
+  {name:'Gold',    min:1001, cls:'mmr-gold',     icon:'🥇'},
+  {name:'Silver',  min:501,  cls:'mmr-silver',   icon:'🥈'},
+  {name:'Bronze',  min:0,    cls:'mmr-bronze',   icon:'🥉'},
+];
+
+function mmrTier(mmr){
+  for(const t of MMR_TIERS) if((mmr||1000)>=t.min) return t;
+  return MMR_TIERS[MMR_TIERS.length-1];
+}
+
+function mmrBadgeHtml(mmr){
+  const t=mmrTier(mmr||1000);
+  return `<span class="mmr-badge ${t.cls}" title="${t.name} · ${mmr||1000} MMR">${t.icon} ${t.name}</span>`;
+}
+
+// Elo expected score for teamA against teamB (average MMR)
+function eloExpected(avgA, avgB){
+  return 1/(1+Math.pow(10,(avgB-avgA)/400));
+}
+
+// K-factor: new players calibrate faster; veterans change slowly
+function kFactor(matches){
+  if(matches<10)  return 64;
+  if(matches<30)  return 48;
+  if(matches<60)  return 32;
+  return 24;
+}
+
+// Score-margin multiplier: big wins give slightly more MMR (capped so it can't be gamed)
+function marginMult(scoreDiff){
+  if(!scoreDiff||scoreDiff<=0) return 1.0;
+  // scoreDiff = absolute difference between the two scores
+  // Range: 1–21 → multiplier 1.0–1.20
+  return Math.min(1.20, 1.0 + (scoreDiff / 105));
+}
+
+/**
+ * calcMMR(winners, losers, score1, score2)
+ * Mutates p.mmr on all players and returns an array of
+ * {id, name, delta} objects for display in the recap.
+ */
+function calcMMR(winners, losers, score1, score2){
+  const avgWin = winners.reduce((s,p)=>s+(p.mmr||1000),0)/winners.length;
+  const avgLos = losers.reduce((s,p)=>s+(p.mmr||1000),0)/losers.length;
+
+  const expWin = eloExpected(avgWin, avgLos); // expected win prob for winners
+  const expLos = 1 - expWin;
+
+  const scoreDiff = Math.abs((score1||0)-(score2||0));
+  const mult = marginMult(scoreDiff);
+
+  const deltas=[];
+
+  winners.forEach(p=>{
+    const k = kFactor(p.matches||0);
+    const raw = k * (1 - expWin) * mult;   // beat expected → large gain
+    const delta = Math.round(Math.max(5, raw)); // floor of +5
+    p.mmr = Math.max(0, (p.mmr||1000) + delta);
+    deltas.push({id:p.id, name:p.name, delta:+delta});
+  });
+
+  losers.forEach(p=>{
+    const k = kFactor(p.matches||0);
+    const raw = k * expLos * mult;          // expected to lose → small loss
+    const delta = Math.round(Math.max(3, raw)); // floor of -3
+    p.mmr = Math.max(0, (p.mmr||1000) - delta);
+    deltas.push({id:p.id, name:p.name, delta:-delta});
+  });
+
+  return deltas;
+}
+
+
 function initNewStateFields(){
   if(!S.announcement)S.announcement='';
   if(!S.courtNicknames)S.courtNicknames={};
