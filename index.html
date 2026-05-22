@@ -1715,7 +1715,7 @@ function renderAdvPanel(n){
         <span class="pg ${p.gender==='F'?'pg-f':'pg-m'}" style="width:13px;height:13px;font-size:7px">${p.gender}</span>
         <span>${p.name}${courtTag}${elseTag}${streakTag}</span>
         <span style="font-size:9px;opacity:0.7">${SKILL_N[p.skill][0]}${p.skill}</span>
-        <span class="gc-badge" style="font-size:9px;padding:1px 4px">🎮${p.matches}G</span>
+        <span class="gc-badge" style="font-size:9px;padding:1px 4px">🎮${(()=>{let c=0;S.log.forEach(e=>{const ns=[...e.t1.split(" & "),...e.t2.split(" & ")];if(ns.includes(p.name))c++;});return c;})()}G</span>
       </div>`;
     }).join('');
   }
