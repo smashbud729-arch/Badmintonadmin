@@ -2361,8 +2361,9 @@ function renderQueueList(){
       ?`<span style="font-size:9px;color:var(--gr4);border:1px solid var(--gr2);border-radius:2px;padding:1px 4px">Just played</span>`:'';
     const tBadge=inA?`<span style="font-size:9px;font-weight:700;color:var(--male);border:1px solid var(--male);border-radius:2px;padding:1px 4px">TEAM A</span>`
       :inB?`<span style="font-size:9px;font-weight:700;color:#E8A04C;border:1px solid #E8A04C;border-radius:2px;padding:1px 4px">TEAM B</span>`:'';
-    // Game count badge — only show if they've played at least 1 game
-    const gcBadge=p.matches>0?`<span class="gc-badge">🎮 ${p.matches}G</span>`:'';
+    // Game count badge — session games only (resets each new session)
+    const sessionGames=(()=>{let c=0;S.log.forEach(e=>{const names=[...e.t1.split(' & '),...e.t2.split(' & ')];if(names.includes(p.name))c++;});return c;})();
+    const gcBadge=sessionGames>0?`<span class="gc-badge">🎮 ${sessionGames}G</span>`:'';
     // Winning streak badge — 3+ consecutive wins
     const streak=getWinStreak(p);
     const streakBadge=streak>=3?`<span class="streak-badge">🔥 ${streak} streak</span>`:'';
