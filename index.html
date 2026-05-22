@@ -3418,7 +3418,7 @@ function detectUpset(entry){
 
 
 /* MMR ENGINE */
-const MMR_TIERS=[{name:'Mythic',min:3501,cls:'mmr-mythic',icon:'👑'},{name:'Legend',min:3001,cls:'mmr-legend',icon:'💎'},{name:'Epic',min:2501,cls:'mmr-epic',icon:'⚡'},{name:'Diamond',min:2001,cls:'mmr-diamond',icon:'🔷'},{name:'Platinum',min:1501,cls:'mmr-platinum',icon:'🔵'},{name:'Gold',min:1001,cls:'mmr-gold',icon:'🥇'},{name:'Silver',min:501,cls:'mmr-silver',icon:'🥈'},{name:'Bronze',min:0,cls:'mmr-bronze',icon:'🥉'}];
+const MMR_TIERS=[{name:'Grandmaster',min:3501,cls:'mmr-mythic',icon:'👑'},{name:'Strategist',min:3001,cls:'mmr-legend',icon:'💎'},{name:'Deceiver',min:2501,cls:'mmr-epic',icon:'⚡'},{name:'Tactician',min:2001,cls:'mmr-diamond',icon:'🔷'},{name:'Pacer',min:1501,cls:'mmr-platinum',icon:'🔵'},{name:'Retriever',min:1001,cls:'mmr-gold',icon:'🥇'},{name:'Smasher',min:501,cls:'mmr-silver',icon:'🥈'},{name:'Lifter',min:0,cls:'mmr-bronze',icon:'🥉'}];
 function mmrTier(mmr){for(const t of MMR_TIERS)if((mmr||1000)>=t.min)return t;return MMR_TIERS[MMR_TIERS.length-1];}
 function mmrBadgeHtml(mmr){const t=mmrTier(mmr||1000);return '<span class="mmr-badge '+t.cls+'" title="'+t.name+' \u00b7 '+(mmr||1000)+' MMR">'+t.icon+' '+t.name+'</span>';}
 function eloExpected(a,b){return 1/(1+Math.pow(10,(b-a)/400));}
