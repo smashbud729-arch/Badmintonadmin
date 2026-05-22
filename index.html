@@ -805,6 +805,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 /* MMR Tier Badges */
 .mmr-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:0.04em;text-transform:uppercase;flex-shrink:0}
+.recap-modal .mmr-badge{font-size:7.5px;padding:2px 5px;letter-spacing:0.02em}
 .mmr-bronze{background:#3D2400;color:#CD7F32;border:1px solid #8B5513}
 .mmr-silver{background:#1A1A2A;color:#C0C0C0;border:1px solid #808080}
 .mmr-gold{background:#2A2000;color:#FFD700;border:1px solid #B8860B}
@@ -1110,7 +1111,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
     <div style="font-size:13px;font-weight:700;color:var(--pk);margin-bottom:2px" id="recap-teams"></div>
     <div class="recap-score" id="recap-score">0 : 0</div>
     <div style="font-size:14px;font-weight:700;color:var(--gr4);margin:4px 0 8px" id="recap-winner"></div>
-    <div style="display:flex;justify-content:center;gap:16px;margin:10px 0 14px" id="recap-stats"></div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px 14px;margin:10px 0 14px" id="recap-stats"></div>
     <div id="recap-fun-stat" style="font-size:11px;color:var(--gr4);background:var(--b3);border-radius:6px;padding:6px 12px;margin-bottom:14px"></div>
     <button class="btn btn-g" onclick="closeRecapModal()" style="width:100%">👍 Nice Game!</button>
   </div>
@@ -3189,7 +3190,7 @@ function showMatchRecap(entry,courtId,elapsed){
   if(S.log.length===1)funStat='🏸 First match of the session!';
   document.getElementById('recap-fun-stat').textContent=funStat;
   const sLines=winTeam.map(p=>{const s=getWinStreak(p);return s>=2?`<div style="font-size:11px;color:var(--pk);font-weight:600">🔥 ${p.name}: ${s} streak</div>`:''}).filter(Boolean);
-  const mLines=(entry.mmrDeltas||[]).map(d=>{const pl=S.players.find(x=>x.id===d.id);const sign=d.delta>0?'+':'';const cls=d.delta>0?'mmr-delta-pos':'mmr-delta-neg';return `<div style="display:flex;align-items:center;gap:5px;font-size:11px"><span style="font-weight:600;color:var(--w)">${d.name}</span><span class="${cls}">${sign}${d.delta} MMR</span>${mmrBadgeHtml(pl?pl.mmr:1000)}</div>`;});
+  const mLines=(entry.mmrDeltas||[]).map(d=>{const pl=S.players.find(x=>x.id===d.id);const sign=d.delta>0?'+':'';const cls=d.delta>0?'mmr-delta-pos':'mmr-delta-neg';return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap"><span style="font-weight:600;color:var(--w)">${d.name}</span><span class="${cls}">${sign}${d.delta} MMR</span><span style="flex-shrink:0;font-size:8px">${mmrBadgeHtml(pl?pl.mmr:1000)}</span></div>`;});
   document.getElementById('recap-stats').innerHTML=[...sLines,...mLines].join('')||'';
   bd.classList.add('open');
 }
