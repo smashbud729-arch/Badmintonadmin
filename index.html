@@ -2201,7 +2201,7 @@ async function addPlayer(){
   if(!name){toast('Enter a player name');return}
   if(S.players.find(x=>x.name.toLowerCase()===name.toLowerCase())){toast('⚠ '+name+' is already in this session');return}
   const p={id:S.nextId++,name,gender:document.getElementById('p-gender').value,skill:parseInt(document.getElementById('p-skill').value),mode:document.getElementById('p-mode').value,wins:0,losses:0,matches:0,mmr:1000,inQueue:true,onCourt:false,lastMatchAt:-99,queueCount:1};
-  S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
+  S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};grantAttendanceBonus(p);
   document.getElementById('p-name').value='';
   render();autoSave();
   try{
@@ -2218,10 +2218,19 @@ async function addPlayer(){
   }catch(e){console.error('addPlayer DB:',e);toast(p.name+' added (offline)');}
   render();autoSave();
 }
+/* ── Attendance bonus: +200 MMR, granted once per player per manager session ── */
+function grantAttendanceBonus(p){
+  if(!S.manager||!S.manager.name)return; // only when a manager session exists
+  if(p.attendanceBonus)return;           // already received this session
+  p.attendanceBonus=true;
+  p.mmr=(p.mmr||1000)+200;
+  toast('🎉 '+p.name+' received +200 MMR attendance bonus!');
+}
+
 function toggleQueue(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
   if(p.inQueue){p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);toast(p.name+' left queue')}
-  else{p.inQueue=true;S.queue.push(pid_);p.queueCount=(p.queueCount||0)+1;toast(p.name+' joined queue');playSound('queue')}
+  else{p.inQueue=true;S.queue.push(pid_);p.queueCount=(p.queueCount||0)+1;grantAttendanceBonus(p);toast(p.name+' joined queue');playSound('queue')}
   render();autoSave();
 }
 function removePlayer(pid_){
@@ -3396,7 +3405,7 @@ function showQR(){
 function queueAll(){
   const unqueued=S.players.filter(p=>!p.inQueue&&!p.onCourt);
   if(!unqueued.length){toast('All players are already in queue');return;}
-  unqueued.forEach(p=>{p.inQueue=true;S.queue.push(p.id);p.queueCount=(p.queueCount||0)+1;});
+  unqueued.forEach(p=>{p.inQueue=true;S.queue.push(p.id);p.queueCount=(p.queueCount||0)+1;grantAttendanceBonus(p);});
   toast(unqueued.length+' players added to queue');render();autoSave();
 }
 function dequeueAll(){
