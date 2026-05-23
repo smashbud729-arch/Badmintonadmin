@@ -2229,7 +2229,7 @@ function grantAttendanceBonus(p){
 
 function toggleQueue(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
-  if(p.inQueue){p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);toast(p.name+' left queue')}
+  if(p.inQueue){p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);if(p.attendanceBonus){p.attendanceBonus=false;p.mmr=Math.max(0,(p.mmr||1000)-200);}toast(p.name+' left queue')}
   else{p.inQueue=true;S.queue.push(pid_);p.queueCount=(p.queueCount||0)+1;grantAttendanceBonus(p);toast(p.name+' joined queue');playSound('queue')}
   render();autoSave();
 }
@@ -3411,7 +3411,7 @@ function queueAll(){
 function dequeueAll(){
   const queued=S.players.filter(p=>p.inQueue&&!p.onCourt);
   if(!queued.length){toast('No players in queue');return;}
-  queued.forEach(p=>{p.inQueue=false;S.queue=S.queue.filter(x=>x!==p.id);});
+  queued.forEach(p=>{p.inQueue=false;S.queue=S.queue.filter(x=>x!==p.id);if(p.attendanceBonus){p.attendanceBonus=false;p.mmr=Math.max(0,(p.mmr||1000)-200);}});
   toast(queued.length+' players removed from queue');render();autoSave();
 }
 
