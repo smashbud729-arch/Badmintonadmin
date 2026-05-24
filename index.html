@@ -822,7 +822,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 /* ── Player Profile Viewer ── */
 #pp-card .pp-hero{border-radius:14px;padding:20px 18px 14px;margin-bottom:10px;position:relative;overflow:hidden}
 #pp-card .pp-hero::before{content:'';position:absolute;inset:0;opacity:0.07;background:radial-gradient(circle at 70% 40%,#fff,transparent 70%)}
-#pp-card .pp-avatar-ring{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;border:3px solid;flex-shrink:0;position:relative}
+#pp-card .pp-avatar-ring{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;border:3px solid;flex-shrink:0;position:relative;overflow:hidden;cursor:pointer}
+#pp-card .pp-avatar-ring img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+#pp-card .pp-avatar-edit{position:absolute;bottom:0;left:0;right:0;background:#00000099;font-size:9px;font-weight:700;color:#fff;text-align:center;padding:3px 0;opacity:0;transition:opacity 0.2s;border-radius:0 0 50px 50px;letter-spacing:0.05em}
+#pp-card .pp-avatar-ring:hover .pp-avatar-edit{opacity:1}
+#pp-card .pp-avatar-ring:hover{box-shadow:0 0 0 2px #ffffff44}
 #pp-card .pp-name{font-size:22px;font-weight:900;color:var(--w);letter-spacing:-0.02em;line-height:1}
 #pp-card .pp-tier-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin-top:6px;border:1px solid}
 #pp-card .pp-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
@@ -3623,9 +3627,11 @@ function renderPlayerProfile(p){
   <!-- Hero -->
   <div class="pp-hero" style="background:linear-gradient(135deg,${m.bg},#000000);border:1px solid ${m.border};${glowAnim?'box-shadow:0 0 18px '+m.glow:''}">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
-      <div class="pp-avatar-ring" style="border-color:${m.col};background:${m.bg};${glowAnim?'animation:pp-tier-pulse 2s ease-in-out infinite':''}">
-        ${p.gender==='F'?'👩':'👨'}
+      <div class="pp-avatar-ring" style="border-color:${m.col};background:${m.bg};${glowAnim?'animation:pp-tier-pulse 2s ease-in-out infinite':''}" onclick="triggerAvatarUpload(${p.id})" title="Click to upload photo">
+        ${p.avatarB64?`<img src="${p.avatarB64}" alt="${p.name}"/>`:`<span style="font-size:28px">${p.gender==='F'?'👩':'👨'}</span>`}
+        <div class="pp-avatar-edit">📷 EDIT</div>
       </div>
+      <input type="file" id="pp-avatar-input-${p.id}" accept="image/*" style="display:none" onchange="handleAvatarUpload(${p.id},this)"/>
       <div style="flex:1;min-width:0">
         <div class="pp-name">${p.name}</div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
@@ -3690,12 +3696,18 @@ function renderPlayerProfile(p){
     ${recentHtml}
   </div>`:''}
 
-  <!-- QR Code -->
-  <button class="pp-qr-btn" onclick="togglePpQr(${p.id})">📱 Show Profile QR Code</button>
-  <div id="pp-qr-${p.id}" style="display:none" class="pp-qr-wrap">
-    <div style="font-size:10px;color:var(--gr4);margin-bottom:8px">Scan to view ${p.name}'s stat card</div>
-    <img id="pp-qr-img-${p.id}" src="" style="width:180px;height:180px;border-radius:8px;border:2px solid ${m.border}" alt="QR"/>
-    <div style="font-size:9px;color:var(--gr4);margin-top:6px">Stats encoded as of this session</div>
+  <!-- Share / QR Section -->
+  <div class="pp-section" style="margin-bottom:0">
+    <div class="pp-section-title">Share Profile</div>
+    <div style="display:flex;gap:8px">
+      <button class="pp-qr-btn" style="flex:1" onclick="togglePpQr(${p.id})">📱 QR Code</button>
+      <button class="pp-qr-btn" style="flex:1;border-color:${m.border};color:${m.col}" onclick="downloadPlayerCard(${p.id})">⬇ Download Card</button>
+    </div>
+    <div id="pp-qr-${p.id}" style="display:none;margin-top:10px" class="pp-qr-wrap">
+      <div style="font-size:10px;color:var(--gr4);margin-bottom:8px">Scan to view ${p.name}'s stat card</div>
+      <img id="pp-qr-img-${p.id}" src="" style="width:160px;height:160px;border-radius:8px;border:2px solid ${m.border};display:block;margin:0 auto" alt="QR" crossorigin="anonymous"/>
+      <div style="font-size:9px;color:var(--gr4);margin-top:6px">Stats encoded as of this session</div>
+    </div>
   </div>
   `;
 
@@ -3703,6 +3715,34 @@ function renderPlayerProfile(p){
   genPpQr(p);
 }
 
+// ── Avatar upload ──
+function triggerAvatarUpload(pid_){
+  const inp=document.getElementById('pp-avatar-input-'+pid_);
+  if(inp)inp.click();
+}
+
+function handleAvatarUpload(pid_,input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const p=S.players.find(x=>x.id===pid_);if(!p)return;
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=256;
+      const scale=Math.min(MAX/img.width,MAX/img.height,1);
+      const c=document.createElement('canvas');
+      c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      p.avatarB64=c.toDataURL('image/jpeg',0.85);
+      autoSave();renderPlayerProfile(p);
+      toast('📷 Avatar updated for '+p.name);
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── QR toggle ──
 function togglePpQr(pid_){
   const p=S.players.find(x=>x.id===pid_);if(!p)return;
   const wrap=document.getElementById('pp-qr-'+pid_);
@@ -3715,17 +3755,148 @@ function genPpQr(p){
   const m=TIER_META[t.cls]||{label:t.name};
   const streak=getWinStreak(p);
   const wr_=p.matches?Math.round(p.wins/p.matches*100):0;
-  const txt=[
-    `🏸 ${p.name}`,
-    `Tier: ${t.icon} ${m.label} (${p.mmr||1000} MMR)`,
-    `Record: ${p.wins}W / ${p.losses}L (${wr_}% WR)`,
-    `Career Games: ${p.matches||0}`,
-    streak>0?`Current Streak: ${streak}W`:'',
-    `Skill: ${SKILL_N[p.skill]}`,
-    `Gender: ${p.gender==='F'?'Female':'Male'}`,
+  const lines=[
+    'Whack Badminton | '+p.name,
+    'Tier: '+t.icon+' '+m.label+' ('+( p.mmr||1000)+' MMR)',
+    'Record: '+p.wins+'W / '+p.losses+'L ('+wr_+'% WR)',
+    'Career: '+(p.matches||0)+' games',
+    streak>0?'Streak: '+streak+'W in a row':'',
+    'Skill: '+SKILL_N[p.skill],
   ].filter(Boolean).join('\n');
   const img=document.getElementById('pp-qr-img-'+p.id);
-  if(img)img.src=`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(txt)}&bgcolor=0D0D0D&color=FFFFFF&margin=10`;
+  if(img)img.src='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(lines)+'&bgcolor=0D0D0D&color=FFFFFF&margin=10';
+}
+
+// ── Download player card as PNG ──
+function roundRectPath(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+async function downloadPlayerCard(pid_){
+  const p=S.players.find(x=>x.id===pid_);if(!p)return;
+  const t=mmrTier(p.mmr||1000);
+  const m=TIER_META[t.cls]||{col:'#888888',bg:'#1A1A1A',border:'#333333',glow:'',label:t.name};
+  const wr_=p.matches?Math.round(p.wins/p.matches*100):0;
+  const streak=getWinStreak(p);
+  const hasGlow=!!m.glow;
+  const W=520,H=300;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const ctx=cv.getContext('2d');
+
+  // Background gradient
+  const grad=ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,m.bg);grad.addColorStop(1,'#000000');
+  ctx.fillStyle=grad;roundRectPath(ctx,0,0,W,H,16);ctx.fill();
+
+  // Border
+  ctx.strokeStyle=m.border;ctx.lineWidth=2;
+  if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=18;}
+  roundRectPath(ctx,1,1,W-2,H-2,15);ctx.stroke();ctx.shadowBlur=0;
+
+  // Left accent bar
+  ctx.fillStyle=m.col;
+  if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=14;}
+  roundRectPath(ctx,0,0,5,H,3);ctx.fill();ctx.shadowBlur=0;
+
+  // Avatar
+  const AX=58,AY=78,AR=46;
+  ctx.save();ctx.beginPath();ctx.arc(AX,AY,AR,0,Math.PI*2);ctx.clip();
+  if(p.avatarB64){
+    await new Promise(res=>{
+      const ai=new Image();
+      ai.onload=()=>{ctx.drawImage(ai,AX-AR,AY-AR,AR*2,AR*2);res();};
+      ai.onerror=res;ai.src=p.avatarB64;
+    });
+  } else {
+    const ag=ctx.createRadialGradient(AX,AY,0,AX,AY,AR);
+    ag.addColorStop(0,m.border);ag.addColorStop(1,m.bg);
+    ctx.fillStyle=ag;ctx.fill();
+    ctx.fillStyle=m.col;ctx.font='bold 38px Arial Black, Arial';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(p.name[0].toUpperCase(),AX,AY+2);
+  }
+  ctx.restore();
+  // Avatar ring
+  ctx.beginPath();ctx.arc(AX,AY,AR,0,Math.PI*2);
+  ctx.strokeStyle=m.col;ctx.lineWidth=3;
+  if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=10;}
+  ctx.stroke();ctx.shadowBlur=0;
+
+  // Name
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#FFFFFF';ctx.font='bold 22px Arial Black, Arial';
+  ctx.fillText(p.name,116,52);
+
+  // Tier pill
+  const tierLabel=t.icon+' '+m.label+'   '+( p.mmr||1000)+' MMR';
+  ctx.font='bold 12px Arial';
+  const tw=ctx.measureText(tierLabel).width+22;
+  ctx.fillStyle=m.bg;ctx.strokeStyle=m.border;ctx.lineWidth=1.5;
+  if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=6;}
+  roundRectPath(ctx,116,60,tw,22,11);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle=m.col;ctx.textBaseline='middle';ctx.fillText(tierLabel,128,71);
+
+  // Stats boxes
+  const stats=[
+    {label:'CAREER GAMES',value:String(p.matches||0),col:'#FFFFFF'},
+    {label:'WIN RATE',value:wr_+'%',col:wr_>=50?'#3DA06A':'#E8537A'},
+    {label:'BEST STREAK',value:String(Math.max(streak,p.bestStreak||0))+'W',col:'#FF9944'},
+    {label:'W / L',value:p.wins+' / '+p.losses,col:m.col},
+  ];
+  const SX=116,SY=96,SW=88,SH=54,SGAP=6;
+  stats.forEach((s,i)=>{
+    const x=SX+i*(SW+SGAP);
+    ctx.fillStyle='#FFFFFF0D';roundRectPath(ctx,x,SY,SW,SH,8);ctx.fill();
+    ctx.strokeStyle=m.border+'44';ctx.lineWidth=1;
+    roundRectPath(ctx,x,SY,SW,SH,8);ctx.stroke();
+    ctx.fillStyle=s.col;ctx.font='bold 19px Arial Black, Arial';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.value,x+SW/2,SY+SH/2-7);
+    ctx.fillStyle='#666666';ctx.font='8px Arial';ctx.fillText(s.label,x+SW/2,SY+SH-9);
+  });
+
+  // Skill + gender footnote
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#555555';ctx.font='10px Arial';
+  ctx.fillText(SKILL_N[p.skill]+' · '+(p.gender==='F'?'Female':'Male')+' · Whack Badminton',116,170);
+
+  // Divider
+  ctx.strokeStyle='#FFFFFF11';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(116,178);ctx.lineTo(W-20,178);ctx.stroke();
+
+  // QR code
+  const qrData='Whack // '+p.name+' | '+t.icon+' '+m.label+' ('+( p.mmr||1000)+' MMR) | '+p.wins+'W '+p.losses+'L '+wr_+'%WR'+(streak>0?' | Streak:'+streak+'W':'');
+  const qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=100x100&data='+encodeURIComponent(qrData)+'&bgcolor=111111&color=FFFFFF&margin=5';
+  await new Promise(res=>{
+    const qi=new Image();qi.crossOrigin='anonymous';
+    qi.onload=()=>{
+      ctx.fillStyle='#111111';roundRectPath(ctx,W-120,H-120,100,100,8);ctx.fill();
+      ctx.strokeStyle=m.border+'66';ctx.lineWidth=1;
+      roundRectPath(ctx,W-120,H-120,100,100,8);ctx.stroke();
+      ctx.drawImage(qi,W-118,H-118,96,96);res();
+    };
+    qi.onerror=res;qi.src=qrSrc;
+    setTimeout(res,5000);
+  });
+
+  // Scan label
+  ctx.fillStyle='#444444';ctx.font='8px Arial';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillText('SCAN FOR STATS',W-70,H-10);
+
+  // Branding
+  ctx.fillStyle='#333333';ctx.font='bold 10px Arial';ctx.textAlign='left';
+  ctx.fillText('WHACK',14,H-14);
+
+  // Trigger download
+  const link=document.createElement('a');
+  link.download=(p.name.replace(/\s+/g,'_'))+'_WhackCard.png';
+  link.href=cv.toDataURL('image/png');
+  link.click();
+  toast('📥 Card saved — '+p.name+'!');
 }
 
 /* ── VISUAL FX ── */
