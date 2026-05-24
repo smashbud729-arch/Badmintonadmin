@@ -2878,18 +2878,40 @@ async function dbUpdatePlayerStats(p){
 
 async function dbSaveAvatar(p){
   const sb=getSupabase();
-  if(!sb||!p.dbId){
-    // No dbId yet — try to find the player by name first
-    if(!sb)return;
+  if(!sb){toast('⚠ Not connected to database');return;}
+
+  // Resolve dbId if missing
+  if(!p.dbId){
     try{
-      const res=await sb.from('players').select('id').ilike('name',p.name).limit(1);
-      if(!res.error&&res.data&&res.data[0])p.dbId=res.data[0].id;
-      else return;
-    }catch(e){return;}
+      const look=await sb.from('players').select('id').ilike('name',p.name).limit(1);
+      if(!look.error&&look.data&&look.data[0])p.dbId=look.data[0].id;
+      else{toast('⚠ Player not found in DB — sync first');return;}
+    }catch(e){toast('⚠ DB lookup failed');return;}
   }
-  const res=await sb.from('players').update({avatar:p.avatarB64||null}).eq('id',p.dbId);
-  if(res.error){console.error('Avatar save error:',res.error);toast('⚠ Avatar cloud save failed');}
-  else{syncStatus('ok','Avatar saved to cloud ✓');toast('☁ Avatar synced to cloud!');}
+
+  // Size guard — base64 JPEG ~512px should be ~80–120 KB; warn if suspiciously large
+  const kb=Math.round((p.avatarB64||'').length*0.75/1024);
+  console.log('[Avatar] Saving '+kb+'KB for '+p.name+' (dbId:'+p.dbId+')');
+  if(kb>400){toast('⚠ Photo too large ('+kb+'KB). Try a smaller image.');return;}
+
+  syncStatus('busy','Saving avatar…');
+  const res=await sb.from('players').update({avatar:p.avatarB64||null}).eq('id',p.dbId).select('id,avatar');
+  if(res.error){
+    console.error('[Avatar] Save error:',res.error);
+    syncStatus('err','Avatar save failed');
+    toast('⚠ Avatar not saved: '+res.error.message);
+    return;
+  }
+  // Verify the data actually came back with avatar set
+  const saved=res.data&&res.data[0]&&res.data[0].avatar;
+  if(!saved){
+    console.warn('[Avatar] Update succeeded but avatar field is empty in response — possible column type issue');
+    toast('⚠ Avatar may not have saved — check Supabase column type is TEXT');
+    return;
+  }
+  syncStatus('ok','Avatar saved ✓');
+  toast('☁ Avatar synced to cloud!');
+  console.log('[Avatar] Confirmed saved for '+p.name);
 }
 
 async function dbDeletePlayer(p){
@@ -2955,7 +2977,7 @@ async function loadFromDB(){
       players.forEach(row=>{
         let local=S.players.find(p=>p.dbId===row.id);
         if(!local)local=S.players.find(p=>p.name.toLowerCase()===row.name.toLowerCase());
-        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar&&!local.avatarB64)local.avatarB64=row.avatar;merged++;}
+        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar)local.avatarB64=row.avatar;merged++;}
         else{S.players.push({id:S.nextId++,dbId:row.id,name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,mmr:row.mmr||1000,avatarB64:row.avatar||null,inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0});added++;}
       });
       syncStatus('ok',`Loaded ${players.length} player${players.length>1?'s':''} from DB`);
@@ -3906,7 +3928,11 @@ function confirmCrop(){
   ctx.drawImage(_crop.img,_crop.ox*scale,_crop.oy*scale,_crop.img.width*_crop.zoom*scale,_crop.img.height*_crop.zoom*scale);
   const p=S.players.find(x=>x.id===_crop.pid);
   if(!p){closeCropModal();return;}
-  p.avatarB64=out.toDataURL('image/jpeg',0.88);
+  const b64=out.toDataURL('image/jpeg',0.82); // 0.82 = good quality/size balance at 512px
+  const kb=Math.round(b64.length*0.75/1024);
+  console.log('[Avatar] Cropped image: '+kb+'KB');
+  if(kb>350){toast('⚠ Image too large ('+kb+'KB) — try zooming in more to crop tighter');closeCropModal();return;}
+  p.avatarB64=b64;
   autoSave();
   renderPlayerProfile(p);
   dbSaveAvatar(p);
