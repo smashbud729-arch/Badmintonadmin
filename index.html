@@ -781,7 +781,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .recap-score{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--pk);letter-spacing:0.06em;line-height:1}
 .recap-stat{font-size:11px;color:var(--gr4);margin-top:2px}
 /* Confetti canvas */
-#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}
+/* confetti-canvas styles defined below */
 /* Court timer alert */
 .court-card.overtime{border-color:#FF6B35;box-shadow:0 0 12px rgba(255,107,53,0.3);animation:overtime-pulse 1.5s ease-in-out infinite}
 @keyframes overtime-pulse{0%,100%{border-color:#FF6B35}50%{border-color:#FF9E74}}
@@ -1182,7 +1182,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 </div>
 
 <!-- Confetti canvas -->
-<canvas id="confetti-canvas" style="display:none"></canvas>
+<!-- confetti-canvas defined in rank-up overlay section -->
 
 <!-- Match Recap Modal -->
 <div class="backdrop" id="recap-modal-backdrop">
@@ -3216,40 +3216,7 @@ window._doResume=async function(sid){
    ════════════════════════════════════════════════════ */
 
 /* ── 1. CONFETTI ── */
-function launchConfetti(){
-  const canvas=document.getElementById('confetti-canvas');
-  if(!canvas)return;
-  canvas.style.display='block';
-  const ctx=canvas.getContext('2d');
-  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-  const pieces=[];
-  const colors=['#E8537A','#F2879E','#4A7C59','#FFD700','#5B8DD9','#FFF'];
-  for(let i=0;i<120;i++){
-    pieces.push({
-      x:Math.random()*canvas.width,y:-10,
-      w:Math.random()*10+5,h:Math.random()*6+3,
-      color:colors[Math.floor(Math.random()*colors.length)],
-      angle:Math.random()*360,
-      vx:(Math.random()-0.5)*4,vy:Math.random()*4+2,
-      va:(Math.random()-0.5)*5,alpha:1
-    });
-  }
-  let frame=0;
-  function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    pieces.forEach(p=>{
-      p.x+=p.vx;p.y+=p.vy;p.angle+=p.va;p.alpha-=0.008;
-      ctx.save();ctx.globalAlpha=Math.max(0,p.alpha);
-      ctx.translate(p.x,p.y);ctx.rotate(p.angle*Math.PI/180);
-      ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
-      ctx.restore();
-    });
-    frame++;
-    if(frame<180)requestAnimationFrame(draw);
-    else{ctx.clearRect(0,0,canvas.width,canvas.height);canvas.style.display='none';}
-  }
-  draw();
-}
+// launchConfetti defined below in VISUAL FX section
 
 /* ── 2. SOUND EFFECTS ── */
 function playSound(type){
