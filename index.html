@@ -819,6 +819,26 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 /* Rivalry tracker */
 .rivalry-chip{background:var(--b3);border:1px solid var(--pkl);border-radius:6px;padding:7px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:11px}
 
+/* ── Avatar Crop Modal ── */
+#avatar-crop-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#000000CC;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 0.25s}
+#avatar-crop-modal.show{opacity:1;pointer-events:auto}
+#avatar-crop-box{background:#111111;border:1px solid #333;border-radius:16px;padding:20px;width:min(340px,92vw);display:flex;flex-direction:column;align-items:center;gap:14px;animation:crop-pop 0.3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes crop-pop{from{transform:scale(0.85);opacity:0}to{transform:scale(1);opacity:1}}
+#avatar-crop-canvas-wrap{position:relative;width:240px;height:240px;border-radius:50%;overflow:hidden;border:3px solid #444;cursor:grab;touch-action:none;background:#000;flex-shrink:0}
+#avatar-crop-canvas-wrap:active{cursor:grabbing}
+#avatar-crop-canvas{position:absolute;top:0;left:0;transform-origin:0 0}
+#avatar-crop-overlay{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 9999px #00000088;pointer-events:none}
+.crop-controls{display:flex;align-items:center;gap:10px;width:100%}
+.crop-zoom-btn{width:32px;height:32px;border-radius:50%;border:1px solid #444;background:#1A1A1A;color:#CCC;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;line-height:1}
+.crop-zoom-btn:hover{border-color:#888;color:#fff}
+#crop-zoom-slider{flex:1;accent-color:#E8537A;height:4px}
+.crop-action-row{display:flex;gap:8px;width:100%}
+.crop-action-row button{flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none}
+#crop-cancel-btn{background:#1A1A1A;color:#888;border:1px solid #333 !important}
+#crop-cancel-btn:hover{color:#fff}
+#crop-confirm-btn{background:#E8537A;color:#fff}
+#crop-confirm-btn:hover{background:#C0406A}
+
 /* ── Player Profile Viewer ── */
 #pp-card .pp-hero{border-radius:14px;padding:20px 18px 14px;margin-bottom:10px;position:relative;overflow:hidden}
 #pp-card .pp-hero::before{content:'';position:absolute;inset:0;opacity:0.07;background:radial-gradient(circle at 70% 40%,#fff,transparent 70%)}
@@ -900,6 +920,27 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 
 
+
+<!-- ═══ AVATAR CROP MODAL ═══ -->
+<div id="avatar-crop-modal">
+  <div id="avatar-crop-box">
+    <div style="font-size:13px;font-weight:700;color:#CCC;letter-spacing:0.05em">📷 Crop & Position Avatar</div>
+    <div id="avatar-crop-canvas-wrap">
+      <canvas id="avatar-crop-canvas"></canvas>
+      <div id="avatar-crop-overlay"></div>
+    </div>
+    <div class="crop-controls">
+      <button class="crop-zoom-btn" onclick="cropZoom(-0.1)">−</button>
+      <input id="crop-zoom-slider" type="range" min="0.5" max="3" step="0.01" value="1" oninput="cropZoomSlider(this.value)"/>
+      <button class="crop-zoom-btn" onclick="cropZoom(0.1)">+</button>
+    </div>
+    <div style="font-size:10px;color:#555;text-align:center">Drag to reposition · Pinch or scroll to zoom</div>
+    <div class="crop-action-row">
+      <button id="crop-cancel-btn" onclick="closeCropModal()">Cancel</button>
+      <button id="crop-confirm-btn" onclick="confirmCrop()">✓ Use Photo</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ RANK-UP OVERLAY ═══ -->
 <div id="rankup-overlay" onclick="closeRankUp()">
@@ -3732,32 +3773,145 @@ function renderPlayerProfile(p){
   genPpQr(p);
 }
 
-// ── Avatar upload ──
+// ── Avatar crop system ──
+const _crop={pid:null,img:null,zoom:1,ox:0,oy:0,dragging:false,lastX:0,lastY:0,lastDist:0,SIZE:240};
+
 function triggerAvatarUpload(pid_){
   const inp=document.getElementById('pp-avatar-input-'+pid_);
-  if(inp)inp.click();
+  if(inp){inp.value='';inp.click();}
 }
 
 function handleAvatarUpload(pid_,input){
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
-    const p=S.players.find(x=>x.id===pid_);if(!p)return;
     const img=new Image();
     img.onload=()=>{
-      const MAX=256;
-      const scale=Math.min(MAX/img.width,MAX/img.height,1);
-      const c=document.createElement('canvas');
-      c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);
-      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      p.avatarB64=c.toDataURL('image/jpeg',0.85);
-      autoSave();renderPlayerProfile(p);
-      dbSaveAvatar(p);
-      toast('📷 Avatar updated for '+p.name);
+      _crop.pid=pid_;_crop.img=img;
+      // Fit image to fill the 240px circle by default
+      _crop.zoom=Math.max(_crop.SIZE/img.width,_crop.SIZE/img.height);
+      // Centre
+      _crop.ox=(_crop.SIZE-img.width*_crop.zoom)/2;
+      _crop.oy=(_crop.SIZE-img.height*_crop.zoom)/2;
+      // Sync slider
+      const sl=document.getElementById('crop-zoom-slider');
+      if(sl){sl.min=_crop.zoom*0.5;sl.max=_crop.zoom*4;sl.step=_crop.zoom*0.01;sl.value=_crop.zoom;}
+      openCropModal();
+      requestAnimationFrame(drawCrop);
     };
     img.src=e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+function openCropModal(){
+  const m=document.getElementById('avatar-crop-modal');
+  if(m)m.classList.add('show');
+  const wrap=document.getElementById('avatar-crop-canvas-wrap');
+  const cv=document.getElementById('avatar-crop-canvas');
+  if(!cv||!wrap)return;
+  cv.width=_crop.SIZE;cv.height=_crop.SIZE;
+  // ── Mouse events ──
+  wrap.onmousedown=e=>{_crop.dragging=true;_crop.lastX=e.clientX;_crop.lastY=e.clientY;e.preventDefault();};
+  window.onmousemove=e=>{
+    if(!_crop.dragging)return;
+    _crop.ox+=e.clientX-_crop.lastX;_crop.oy+=e.clientY-_crop.lastY;
+    _crop.lastX=e.clientX;_crop.lastY=e.clientY;
+    clampCrop();drawCrop();
+  };
+  window.onmouseup=()=>{_crop.dragging=false;};
+  // ── Touch events ──
+  wrap.ontouchstart=e=>{
+    if(e.touches.length===1){
+      _crop.dragging=true;_crop.lastX=e.touches[0].clientX;_crop.lastY=e.touches[0].clientY;
+    } else if(e.touches.length===2){
+      _crop.dragging=false;
+      _crop.lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    }
+    e.preventDefault();
+  },{passive:false};
+  wrap.ontouchmove=e=>{
+    if(e.touches.length===1&&_crop.dragging){
+      _crop.ox+=e.touches[0].clientX-_crop.lastX;_crop.oy+=e.touches[0].clientY-_crop.lastY;
+      _crop.lastX=e.touches[0].clientX;_crop.lastY=e.touches[0].clientY;
+      clampCrop();drawCrop();
+    } else if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      const delta=d-_crop.lastDist;_crop.lastDist=d;
+      applyCropZoom(_crop.zoom+(delta*0.008),_crop.SIZE/2,_crop.SIZE/2);
+    }
+    e.preventDefault();
+  },{passive:false};
+  // ── Scroll to zoom ──
+  wrap.onwheel=e=>{
+    applyCropZoom(_crop.zoom-(e.deltaY*0.001),_crop.SIZE/2,_crop.SIZE/2);
+    e.preventDefault();
+  },{passive:false};
+}
+
+function closeCropModal(){
+  const m=document.getElementById('avatar-crop-modal');
+  if(m)m.classList.remove('show');
+  window.onmousemove=null;window.onmouseup=null;
+  _crop.pid=null;_crop.img=null;
+}
+
+function drawCrop(){
+  const cv=document.getElementById('avatar-crop-canvas');if(!cv||!_crop.img)return;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,_crop.SIZE,_crop.SIZE);
+  ctx.drawImage(_crop.img,_crop.ox,_crop.oy,_crop.img.width*_crop.zoom,_crop.img.height*_crop.zoom);
+}
+
+function cropZoom(delta){
+  applyCropZoom(_crop.zoom+delta,_crop.SIZE/2,_crop.SIZE/2);
+  const sl=document.getElementById('crop-zoom-slider');
+  if(sl)sl.value=_crop.zoom;
+}
+
+function cropZoomSlider(val){
+  applyCropZoom(parseFloat(val),_crop.SIZE/2,_crop.SIZE/2);
+}
+
+function applyCropZoom(newZoom,cx,cy){
+  const minZoom=Math.max(_crop.SIZE/(_crop.img?.width||_crop.SIZE),_crop.SIZE/(_crop.img?.height||_crop.SIZE));
+  newZoom=Math.max(minZoom*0.5,Math.min(newZoom,minZoom*8));
+  // Zoom towards centre point
+  const ratio=newZoom/_crop.zoom;
+  _crop.ox=cx-ratio*(cx-_crop.ox);
+  _crop.oy=cy-ratio*(cy-_crop.oy);
+  _crop.zoom=newZoom;
+  clampCrop();drawCrop();
+  const sl=document.getElementById('crop-zoom-slider');
+  if(sl)sl.value=_crop.zoom;
+}
+
+function clampCrop(){
+  if(!_crop.img)return;
+  const iw=_crop.img.width*_crop.zoom,ih=_crop.img.height*_crop.zoom;
+  // Prevent image leaving the circle area (keep at least SIZE px covered)
+  if(iw>=_crop.SIZE){_crop.ox=Math.min(0,Math.max(_crop.SIZE-iw,_crop.ox));}
+  else{_crop.ox=Math.max(0,Math.min(_crop.SIZE-iw,_crop.ox));}
+  if(ih>=_crop.SIZE){_crop.oy=Math.min(0,Math.max(_crop.SIZE-ih,_crop.oy));}
+  else{_crop.oy=Math.max(0,Math.min(_crop.SIZE-ih,_crop.oy));}
+}
+
+function confirmCrop(){
+  if(!_crop.img||_crop.pid==null)return;
+  // Export at 2× for quality
+  const OUT=512;
+  const scale=OUT/_crop.SIZE;
+  const out=document.createElement('canvas');out.width=OUT;out.height=OUT;
+  const ctx=out.getContext('2d');
+  ctx.drawImage(_crop.img,_crop.ox*scale,_crop.oy*scale,_crop.img.width*_crop.zoom*scale,_crop.img.height*_crop.zoom*scale);
+  const p=S.players.find(x=>x.id===_crop.pid);
+  if(!p){closeCropModal();return;}
+  p.avatarB64=out.toDataURL('image/jpeg',0.88);
+  autoSave();
+  renderPlayerProfile(p);
+  dbSaveAvatar(p);
+  toast('📷 Avatar saved for '+p.name);
+  closeCropModal();
 }
 
 // ── QR toggle ──
