@@ -814,6 +814,36 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 /* Rivalry tracker */
 .rivalry-chip{background:var(--b3);border:1px solid var(--pkl);border-radius:6px;padding:7px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:11px}
 
+/* ── Player Profile Viewer ── */
+#pp-card .pp-hero{border-radius:14px;padding:20px 18px 14px;margin-bottom:10px;position:relative;overflow:hidden}
+#pp-card .pp-hero::before{content:'';position:absolute;inset:0;opacity:0.07;background:radial-gradient(circle at 70% 40%,#fff,transparent 70%)}
+#pp-card .pp-avatar-ring{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;border:3px solid;flex-shrink:0;position:relative}
+#pp-card .pp-name{font-size:22px;font-weight:900;color:var(--w);letter-spacing:-0.02em;line-height:1}
+#pp-card .pp-tier-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin-top:6px;border:1px solid}
+#pp-card .pp-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+#pp-card .pp-stat{background:var(--b3);border:1px solid var(--gr2);border-radius:10px;padding:10px 6px;text-align:center}
+#pp-card .pp-stat-v{font-size:20px;font-weight:900;color:var(--w);line-height:1}
+#pp-card .pp-stat-l{font-size:9px;color:var(--gr4);margin-top:3px;text-transform:uppercase;letter-spacing:0.06em}
+#pp-card .pp-section{background:var(--b3);border:1px solid var(--gr2);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+#pp-card .pp-section-title{font-size:10px;font-weight:700;color:var(--gr4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px}
+#pp-card .pp-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:11px}
+#pp-card .pp-bar-bg{flex:1;height:7px;background:var(--gr2);border-radius:4px;overflow:hidden}
+#pp-card .pp-bar-fill{height:100%;border-radius:4px;transition:width 0.6s cubic-bezier(.4,0,.2,1)}
+#pp-card .pp-hype{border-radius:10px;padding:14px;margin-bottom:8px;border:1px solid}
+#pp-card .pp-hype-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+#pp-card .pp-badge-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+#pp-card .pp-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid}
+#pp-card .pp-qr-btn{width:100%;padding:10px;border-radius:10px;border:1px dashed var(--gr2);background:transparent;color:var(--gr4);font-size:12px;cursor:pointer;text-align:center;transition:all 0.2s}
+#pp-card .pp-qr-btn:hover{border-color:var(--pkl);color:var(--pk)}
+#pp-card .pp-qr-wrap{text-align:center;margin-top:8px}
+#pp-card .pp-match-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--gr2);font-size:11px}
+#pp-card .pp-match-row:last-child{border-bottom:none}
+.pp-result-w{color:#3DA06A;font-weight:800}
+.pp-result-l{color:#E8537A;font-weight:800}
+#pp-results .pp-opt{padding:8px 12px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--gr2)}
+#pp-results .pp-opt:last-child{border-bottom:none}
+#pp-results .pp-opt:hover{background:var(--b3)}
+
 /* MMR Tier Badges */
 .mmr-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:0.04em;text-transform:uppercase;flex-shrink:0}
 .recap-modal .mmr-badge{font-size:7.5px;padding:2px 5px;letter-spacing:0.02em}
@@ -1065,8 +1095,18 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
       <div class="slist" id="all-players"></div>
     </div>
     <div>
-      <div class="sh"><div class="st">Match Log</div></div>
-      <div class="slist" id="match-log"></div>
+      <div class="sh" style="align-items:center">
+        <div class="st">Player Profile</div>
+        <div id="pp-search-wrap" style="flex:1;margin:0 8px">
+          <input id="pp-search" class="fc" placeholder="Search player…" oninput="ppSearch(this.value)" style="width:100%;font-size:12px;padding:4px 8px"/>
+        </div>
+      </div>
+      <!-- Search results dropdown -->
+      <div id="pp-results" style="display:none;position:relative;z-index:10;background:var(--b2);border:1px solid var(--gr2);border-radius:8px;margin-bottom:8px;max-height:200px;overflow-y:auto"></div>
+      <!-- Profile card -->
+      <div id="pp-card" style="display:none"></div>
+      <!-- Empty state -->
+      <div id="pp-empty" class="empty-state" style="margin-top:24px">Search for a player above to view their profile.</div>
     </div>
   </div>
 </div>
@@ -1989,6 +2029,11 @@ function endMatch(ci,winner){
   losers.forEach(p=>{p.losses++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
   const prevTiers=Object.fromEntries([...winners,...losers].map(p=>[p.id,mmrTier(p.mmr||1000).name]));
   const mmrDeltas=calcMMR(winners,losers,m.score1,m.score2);
+  // Update best streak
+  [...winners,...losers].forEach(p=>{
+    const s=getWinStreak(p);
+    if(s>(p.bestStreak||0))p.bestStreak=s;
+  });
   // Rank-up detection
   setTimeout(()=>{
     [...winners,...losers].forEach(p=>{
@@ -2459,13 +2504,11 @@ function render(){
   renderAllPlayers();
 
   // Match log
-  const ml=document.getElementById('match-log');
-  if(ml)ml.innerHTML=S.log.length?S.log.map(e=>`
-    <div class="log-e">
-      <div class="log-t">${e.time} · Court ${e.court} · <span class="mode-tag ${MODE_C[e.mode]||'md'}" style="font-size:9px;padding:1px 4px">${e.mode}</span> · ⏱ ${e.duration}</div>
-      <div class="log-m">${e.t1} vs ${e.t2}</div>
-      <div class="log-s">${e.s1} : ${e.s2} · ${e.winner} wins</div>
-    </div>`).join(''):`<div class="empty-state">No matches recorded yet</div>`;
+  // Refresh profile if one is open
+  if(window._ppCurrentId!=null){
+    const _ppp=S.players.find(x=>x.id===window._ppCurrentId);
+    if(_ppp) renderPlayerProfile(_ppp);
+  }
 
   // Payment
 
@@ -3452,6 +3495,242 @@ function showQR(){
   // Use free QR API
   if(img)img.innerHTML=`<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" alt="QR" style="width:200px;height:200px;border-radius:6px"/>`;
   bd.classList.add('open');
+}
+
+/* ── PLAYER PROFILE VIEWER ── */
+
+const TIER_META={
+  'mmr-mythic':  {col:'#FF9900',bg:'#1A0800',border:'#CC6600',glow:'#FF990088',label:'Grandmaster'},
+  'mmr-legend':  {col:'#FF6060',bg:'#200010',border:'#CC2020',glow:'#FF606066',label:'Strategist'},
+  'mmr-epic':    {col:'#CC80FF',bg:'#150020',border:'#7B2FBE',glow:'#CC80FF55',label:'Deceiver'},
+  'mmr-diamond': {col:'#5BE5FF',bg:'#001030',border:'#0080CC',glow:'#5BE5FF44',label:'Tactician'},
+  'mmr-platinum':{col:'#00E5CC',bg:'#002020',border:'#008080',glow:'#00E5CC44',label:'Pacer'},
+  'mmr-gold':    {col:'#FFD700',bg:'#2A2000',border:'#B8860B',glow:'',label:'Retriever'},
+  'mmr-silver':  {col:'#C0C0C0',bg:'#1A1A2A',border:'#808080',glow:'',label:'Smasher'},
+  'mmr-bronze':  {col:'#CD7F32',bg:'#3D2400',border:'#8B5513',glow:'',label:'Lifter'},
+};
+
+function ppSearch(val){
+  const res=document.getElementById('pp-results');
+  const empty=document.getElementById('pp-empty');
+  if(!val.trim()){res.style.display='none';return;}
+  const matches=S.players.filter(p=>p.name.toLowerCase().includes(val.toLowerCase())).slice(0,8);
+  if(!matches.length){res.style.display='none';return;}
+  res.style.display='block';
+  res.innerHTML=matches.map(p=>{
+    const t=mmrTier(p.mmr||1000);
+    const m=TIER_META[t.cls]||{col:'#888',label:t.name};
+    return `<div class="pp-opt" onclick="selectProfile(${p.id})">
+      ${avHtml(p,28)}
+      <span style="flex:1;font-weight:700;color:var(--w)">${p.name}</span>
+      <span style="font-size:10px;font-weight:700;color:${m.col}">${t.icon} ${m.label}</span>
+    </div>`;
+  }).join('');
+  if(empty)empty.style.display='none';
+}
+
+function selectProfile(pid_){
+  const p=S.players.find(x=>x.id===pid_);if(!p)return;
+  document.getElementById('pp-results').style.display='none';
+  document.getElementById('pp-search').value=p.name;
+  renderPlayerProfile(p);
+}
+
+function renderPlayerProfile(p){
+  window._ppCurrentId=p.id;
+  const card=document.getElementById('pp-card');
+  const empty=document.getElementById('pp-empty');
+  if(empty)empty.style.display='none';
+  card.style.display='block';
+
+  const t=mmrTier(p.mmr||1000);
+  const m=TIER_META[t.cls]||{col:'#888888',bg:'#1A1A1A',border:'#333333',glow:'',label:t.name};
+  const hasGlow=!!m.glow;
+
+  // ── Stats ──
+  const matches=p.matches||0;
+  const winRate=matches?Math.round(p.wins/matches*100):0;
+  const streak=getWinStreak(p);
+  const bestStreak=p.bestStreak||streak; // use stored best or current
+
+  // ── Session stats from log ──
+  let sessionW=0,sessionL=0,sessionGames=0;
+  const sessionLog=[];
+  S.log.forEach(e=>{
+    const names=[...e.t1.split(' & '),...e.t2.split(' & ')];
+    if(!names.includes(p.name))return;
+    sessionGames++;
+    const won=e.winner.split(' & ').includes(p.name);
+    if(won)sessionW++;else sessionL++;
+    sessionLog.push({e,won});
+  });
+  const sessionWR=sessionGames?Math.round(sessionW/sessionGames*100):0;
+
+  // ── Favourite partner (most wins together) ──
+  const partnerWins={};
+  S.log.forEach(e=>{
+    const wNames=e.winner.split(' & ');
+    if(!wNames.includes(p.name))return;
+    wNames.forEach(n=>{if(n!==p.name){partnerWins[n]=(partnerWins[n]||0)+1;}});
+  });
+  const bestPartner=Object.entries(partnerWins).sort((a,b)=>b[1]-a[1])[0];
+
+  // ── Biggest win (highest MMR opponent beaten) ──
+  // ── Hype badges ──
+  const badges=[];
+  if(streak>=5) badges.push({icon:'👑',label:'On A Dynasty',col:'#FF9900',bg:'#1A0800',border:'#CC6600'});
+  else if(streak>=3) badges.push({icon:'🔥',label:'On Fire',col:'#FF6633',bg:'#1A0800',border:'#CC4400'});
+  if(winRate>=70&&matches>=5) badges.push({icon:'💎',label:'Elite',col:'#5BE5FF',bg:'#001030',border:'#0080CC'});
+  if(winRate>=50&&matches>=3) badges.push({icon:'⚡',label:'Sharp',col:'#CC80FF',bg:'#150020',border:'#7B2FBE'});
+  if(sessionW>0&&sessionL===0&&sessionGames>=2) badges.push({icon:'🛡','label':'Undefeated Today',col:'#00E5CC',bg:'#002020',border:'#008080'});
+  if(sessionGames>=5) badges.push({icon:'🏃',label:'Iron Player',col:'#FFD700',bg:'#2A2000',border:'#B8860B'});
+  if(bestPartner&&bestPartner[1]>=2) badges.push({icon:'🤝',label:'Dynamic Duo',col:'#FF6688',bg:'#1A0010',border:'#880033'});
+  if(matches===0) badges.push({icon:'🌱',label:'Rookie',col:'#3DA06A',bg:'#001A00',border:'#2E7D32'});
+
+  // ── Hype line ──
+  const hypeLines=[
+    streak>=5?`👑 ${p.name.split(' ')[0]} is UNSTOPPABLE — ${streak} wins in a row!`:null,
+    winRate>=80&&matches>=5?`🎯 ${Math.round(winRate)}% win rate? That's borderline unfair.`:null,
+    winRate>=60&&matches>=5?`📈 ${p.name.split(' ')[0]} wins more than they lose. The court fears them.`:null,
+    streak>=3?`🔥 ${streak} straight Ws. Someone stop this person.`:null,
+    sessionW>0&&sessionL===0&&sessionGames>=2?`🛡 Perfect session so far. Untouchable.`:null,
+    sessionGames===0?`👀 ${p.name.split(' ')[0]} hasn't played yet — the court is waiting.`:null,
+    matches===0?`🌱 Fresh start. The journey to Grandmaster begins now.`:null,
+    `💪 ${p.name.split(' ')[0]} is a ${m.label}. Keep climbing.`,
+  ].filter(Boolean)[0];
+
+  // ── Tier glow animation inline ──
+  const glowAnim=hasGlow?`animation:pp-tier-pulse 2s ease-in-out infinite`:'';
+  const glowStyle=hasGlow?`<style>@keyframes pp-tier-pulse{0%,100%{box-shadow:0 0 8px ${m.glow}}50%{box-shadow:0 0 22px ${m.glow},0 0 40px ${m.glow}55}}</style>`:'';
+
+  // ── Recent matches ──
+  const recentHtml=sessionLog.slice(0,5).map(({e,won})=>`
+    <div class="pp-match-row">
+      <span class="${won?'pp-result-w':'pp-result-l'}">${won?'W':'L'}</span>
+      <span style="color:var(--gr4);font-size:10px">Court ${e.court}</span>
+      <span style="flex:1;color:var(--w2)">${e.t1} vs ${e.t2}</span>
+      <span style="color:var(--gr4)">${e.s1}:${e.s2}</span>
+    </div>`).join('');
+
+  // ── Win/Loss bar ──
+  const wPct=matches?Math.round(p.wins/matches*100):0;
+  const lPct=100-wPct;
+
+  // ── MMR progress to next tier ──
+  const allTiers=[...MMR_TIERS].reverse(); // ascending
+  const tIdx=allTiers.findIndex(x=>x.cls===t.cls);
+  const nextTier=allTiers[tIdx+1];
+  const curMin=t.min;
+  const nextMin=nextTier?nextTier.min:null;
+  const mmrProg=nextMin?Math.min(100,Math.round(((p.mmr||1000)-curMin)/(nextMin-curMin)*100)):100;
+
+  card.innerHTML=`${glowStyle}
+  <!-- Hero -->
+  <div class="pp-hero" style="background:linear-gradient(135deg,${m.bg},#000000);border:1px solid ${m.border};${glowAnim?'box-shadow:0 0 18px '+m.glow:''}">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+      <div class="pp-avatar-ring" style="border-color:${m.col};background:${m.bg};${glowAnim?'animation:pp-tier-pulse 2s ease-in-out infinite':''}">
+        ${p.gender==='F'?'👩':'👨'}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="pp-name">${p.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <span class="pp-tier-pill" style="color:${m.col};background:${m.bg};border-color:${m.border};${glowAnim?'animation:pp-tier-pulse 2s ease-in-out infinite':''}">${t.icon} ${m.label}</span>
+          <span style="font-size:11px;color:${m.col};font-weight:700">${p.mmr||1000} MMR</span>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:9px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em">Skill</div>
+        <div class="sk ${SKILL_C[p.skill]}" style="font-size:11px">${SKILL_N[p.skill]}</div>
+      </div>
+    </div>
+    ${nextTier?`
+    <div style="font-size:9px;color:${m.col};margin-bottom:4px;opacity:0.8">Progress to ${nextTier.icon} ${TIER_META[nextTier.cls]?.label||nextTier.name}</div>
+    <div style="background:#00000055;border-radius:4px;height:6px;overflow:hidden">
+      <div style="height:100%;width:${mmrProg}%;background:${m.col};border-radius:4px;transition:width 0.8s ease;box-shadow:0 0 6px ${m.col}99"></div>
+    </div>
+    <div style="font-size:9px;color:var(--gr4);margin-top:3px;text-align:right">${mmrProg}% · ${nextMin-(p.mmr||1000)} MMR to go</div>
+    `:`<div style="font-size:10px;color:${m.col};text-align:center;font-weight:800;margin-top:4px">👑 MAX RANK ACHIEVED</div>`}
+  </div>
+
+  <!-- Core Stats -->
+  <div class="pp-stats-row">
+    <div class="pp-stat"><div class="pp-stat-v" style="color:var(--w)">${matches}</div><div class="pp-stat-l">Career Games</div></div>
+    <div class="pp-stat"><div class="pp-stat-v" style="color:${winRate>=50?'#3DA06A':'#E8537A'}">${winRate}%</div><div class="pp-stat-l">Win Rate</div></div>
+    <div class="pp-stat"><div class="pp-stat-v" style="color:#FF9944">${Math.max(streak,p.bestStreak||0)}</div><div class="pp-stat-l">Best Streak</div></div>
+    <div class="pp-stat"><div class="pp-stat-v" style="color:${m.col}">${sessionGames}</div><div class="pp-stat-l">Today's Games</div></div>
+  </div>
+
+  <!-- W/L Bar -->
+  <div class="pp-section">
+    <div class="pp-section-title">Win / Loss Record</div>
+    <div class="pp-bar-row">
+      <span style="color:#3DA06A;font-weight:700;width:30px">${p.wins}W</span>
+      <div class="pp-bar-bg">
+        <div class="pp-bar-fill" style="width:${wPct}%;background:linear-gradient(90deg,#2E7D52,#3DA06A)"></div>
+      </div>
+      <span style="color:#E8537A;font-weight:700;width:30px;text-align:right">${p.losses}L</span>
+    </div>
+    <div class="pp-bar-row" style="margin-bottom:0">
+      <span style="color:#3DA06A;font-size:10px;width:30px">${sessionW}W</span>
+      <div class="pp-bar-bg" style="height:4px">
+        <div class="pp-bar-fill" style="width:${sessionWR}%;background:#3DA06A88;height:4px"></div>
+      </div>
+      <span style="color:var(--gr4);font-size:9px;flex:0">Today</span>
+    </div>
+  </div>
+
+  <!-- Highlights / Hype -->
+  <div class="pp-hype" style="background:linear-gradient(135deg,${m.bg}88,#00000088);border-color:${m.border}88">
+    <div class="pp-hype-title" style="color:${m.col}">⚡ Highlights</div>
+    <div style="font-size:13px;color:var(--w);font-style:italic;margin-bottom:10px">"${hypeLines}"</div>
+    ${badges.length?`<div class="pp-badge-row">${badges.map(b=>`<span class="pp-badge" style="color:${b.col};background:${b.bg};border-color:${b.border}">${b.icon} ${b.label}</span>`).join('')}</div>`:''}
+    ${bestPartner?`<div style="font-size:11px;color:var(--gr4)">🤝 Best partner: <span style="color:var(--w);font-weight:700">${bestPartner[0]}</span> (${bestPartner[1]} wins together)</div>`:''}
+    ${streak>=1?`<div style="font-size:11px;color:var(--gr4);margin-top:4px">🔥 Current streak: <span style="color:#FF9944;font-weight:700">${streak} ${streak===1?'win':'wins'}</span></div>`:''}
+  </div>
+
+  <!-- Recent Session Matches -->
+  ${sessionLog.length?`
+  <div class="pp-section">
+    <div class="pp-section-title">Recent Matches This Session</div>
+    ${recentHtml}
+  </div>`:''}
+
+  <!-- QR Code -->
+  <button class="pp-qr-btn" onclick="togglePpQr(${p.id})">📱 Show Profile QR Code</button>
+  <div id="pp-qr-${p.id}" style="display:none" class="pp-qr-wrap">
+    <div style="font-size:10px;color:var(--gr4);margin-bottom:8px">Scan to view ${p.name}'s stat card</div>
+    <img id="pp-qr-img-${p.id}" src="" style="width:180px;height:180px;border-radius:8px;border:2px solid ${m.border}" alt="QR"/>
+    <div style="font-size:9px;color:var(--gr4);margin-top:6px">Stats encoded as of this session</div>
+  </div>
+  `;
+
+  // Load QR eagerly in background
+  genPpQr(p);
+}
+
+function togglePpQr(pid_){
+  const p=S.players.find(x=>x.id===pid_);if(!p)return;
+  const wrap=document.getElementById('pp-qr-'+pid_);
+  if(!wrap)return;
+  wrap.style.display=wrap.style.display==='none'?'block':'none';
+}
+
+function genPpQr(p){
+  const t=mmrTier(p.mmr||1000);
+  const m=TIER_META[t.cls]||{label:t.name};
+  const streak=getWinStreak(p);
+  const wr_=p.matches?Math.round(p.wins/p.matches*100):0;
+  const txt=[
+    `🏸 ${p.name}`,
+    `Tier: ${t.icon} ${m.label} (${p.mmr||1000} MMR)`,
+    `Record: ${p.wins}W / ${p.losses}L (${wr_}% WR)`,
+    `Career Games: ${p.matches||0}`,
+    streak>0?`Current Streak: ${streak}W`:'',
+    `Skill: ${SKILL_N[p.skill]}`,
+    `Gender: ${p.gender==='F'?'Female':'Male'}`,
+  ].filter(Boolean).join('\n');
+  const img=document.getElementById('pp-qr-img-'+p.id);
+  if(img)img.src=`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(txt)}&bgcolor=0D0D0D&color=FFFFFF&margin=10`;
 }
 
 /* ── VISUAL FX ── */
