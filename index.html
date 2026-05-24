@@ -343,8 +343,13 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .adv-pool-btn{padding:3px 9px;border-radius:4px;border:1.5px solid var(--gr2);background:var(--b3);color:var(--gr4);cursor:pointer;font-size:10px;font-weight:700;transition:all 0.15s;font-family:'DM Sans',sans-serif}
 .adv-pool-btn.active{background:var(--pk);border-color:var(--pk);color:#fff}
 .adv-pool-btn:hover:not(.active){border-color:var(--pk);color:var(--pk)}
-.adv-player-grid{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px;min-height:32px;padding:6px;background:var(--b3);border:1px solid var(--gr);border-radius:6px}
-.adv-p-chip{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;border:1.5px solid var(--gr2);background:var(--b4);color:var(--w);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.15s;user-select:none}
+.adv-player-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:9px;min-height:32px}
+.adv-skill-col{background:var(--b3);border:1px solid var(--gr);border-radius:8px;padding:6px 5px;min-height:60px;display:flex;flex-direction:column;gap:4px}
+.adv-skill-header{font-size:10px;font-weight:800;text-align:center;padding:2px 0 5px;letter-spacing:0.08em;border-bottom:1px solid var(--gr2);margin-bottom:2px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.adv-skill-header .adv-sk-letter{font-size:16px;line-height:1}
+.adv-skill-header .adv-sk-count{font-size:9px;font-weight:600;opacity:0.6}
+.adv-p-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:5px 6px;border-radius:5px;border:1.5px solid var(--gr2);background:var(--b4);color:var(--w);cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;user-select:none;width:100%;box-sizing:border-box}
+/* adv-p-chip base defined inside .adv-player-grid block above */
 
 .adv-p-chip.adv-locked{opacity:0.4;cursor:not-allowed;border-color:var(--gr2);background:var(--b3);color:var(--gr4);}
 .adv-p-chip:hover{border-color:var(--pk)}
@@ -1776,27 +1781,50 @@ function renderAdvPanel(n){
   const startBtn= document.getElementById('adv-start-btn-'+n);
   if(!grid) return;
 
-  // Player chips
+  // Player chips — grouped into 5 skill columns (A=5, B=4, C=3, D=2, E=1)
   const pool = advPoolPlayers(n);
+  const skillCols = [5,4,3,2,1]; // A to E
+  const skillColours = {5:'#E8537A',4:'#FF9944',3:'#FFD700',2:'#5BE5FF',1:'#3DA06A'};
+
   if(!pool.length){
-    grid.innerHTML=`<span style="font-size:11px;color:var(--gr4);font-style:italic">No players in this pool</span>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;font-size:11px;color:var(--gr4);font-style:italic;padding:8px">No players in this pool</div>`;
   } else {
-    grid.innerHTML = pool.map(p=>{
-      const inA   = st.teamA.some(x=>x.id===p.id);
-      const inB   = st.teamB.some(x=>x.id===p.id);
-      const elsewhere = !inA&&!inB&&advSelectedElsewhere(n,p.id);
-      const courtClass= p.onCourt?' on-court':'';
-      const selClass  = inA?' sel-a':inB?' sel-b':elsewhere?' adv-locked':'';
-      const courtTag  = p.onCourt?` <span style="font-size:8px;color:#3DA06A;font-weight:700">▶CT</span>`:'';
-      const elseTag   = elsewhere?` <span style="font-size:8px;color:#E8A04C;font-weight:700" title="Assigned in another panel">🔒</span>`:'';
-      const streak    = getWinStreak(p);
-      const streakTag = streak>=3?` 🔥${streak}`:'';
-      const clickFn   = elsewhere?`advTogglePlayer(${n},${p.id})`:`advTogglePlayer(${n},${p.id})`;
-      return `<div class="adv-p-chip${courtClass}${selClass}" onclick="${clickFn}" title="${p.name} · ${SKILL_N[p.skill]} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR${elsewhere?' · 🔒 Assigned in another panel':''}">
-        <span class="pg ${p.gender==='F'?'pg-f':'pg-m'}" style="width:13px;height:13px;font-size:7px">${p.gender}</span>
-        <span>${p.name}${courtTag}${elseTag}${streakTag}</span>
-        <span style="font-size:9px;opacity:0.7">${SKILL_N[p.skill][0]}${p.skill}</span>
-        <span class="gc-badge" style="font-size:9px;padding:1px 4px">🎮${(()=>{let c=0;S.log.forEach(e=>{const ns=[...e.t1.split(" & "),...e.t2.split(" & ")];if(ns.includes(p.name))c++;});return c;})()}G</span>
+    grid.innerHTML = skillCols.map(skill => {
+      const col_colour = skillColours[skill];
+      const colPlayers = pool.filter(p=>p.skill===skill);
+      const chips = colPlayers.map(p=>{
+        const inA       = st.teamA.some(x=>x.id===p.id);
+        const inB       = st.teamB.some(x=>x.id===p.id);
+        const elsewhere = !inA&&!inB&&advSelectedElsewhere(n,p.id);
+        const courtClass= p.onCourt?' on-court':'';
+        const selClass  = inA?' sel-a':inB?' sel-b':elsewhere?' adv-locked':'';
+        const courtTag  = p.onCourt?`<span style="font-size:7px;color:#3DA06A;font-weight:700">▶ON CT</span>`:'';
+        const elseTag   = elsewhere?`<span style="font-size:7px;color:#E8A04C;font-weight:700">🔒</span>`:'';
+        const streak    = getWinStreak(p);
+        const streakTag = streak>=3?`<span style="font-size:9px">🔥${streak}</span>`:'';
+        const sessionG  = (()=>{let c=0;S.log.forEach(e=>{const ns=[...e.t1.split(' & '),...e.t2.split(' & ')];if(ns.includes(p.name))c++;});return c;})();
+        const gcTag     = sessionG>0?`<span class="gc-badge" style="font-size:8px;padding:1px 3px">🎮${sessionG}G</span>`:'';
+        const genderDot = `<span class="pg ${p.gender==='F'?'pg-f':'pg-m'}" style="width:11px;height:11px;font-size:6px;flex-shrink:0">${p.gender}</span>`;
+        const inBadge   = inA?`<span style="font-size:7px;font-weight:800;color:var(--male)">TEAM A</span>`:inB?`<span style="font-size:7px;font-weight:800;color:var(--pkl)">TEAM B</span>`:'';
+        return `<div class="adv-p-chip${courtClass}${selClass}" onclick="advTogglePlayer(${n},${p.id})" title="${p.name} · ${SKILL_N[p.skill]} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR${elsewhere?' · 🔒 In another panel':''}">
+          <div style="display:flex;align-items:center;gap:3px;width:100%">
+            ${genderDot}
+            <span style="flex:1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+            ${inBadge}
+          </div>
+          <div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap">
+            <span style="font-size:9px;color:var(--gr4)">${wr(p)}%WR</span>
+            ${gcTag}${streakTag}${courtTag}${elseTag}
+          </div>
+        </div>`;
+      }).join('') || `<span style="font-size:10px;color:var(--gr2);padding:4px 0;text-align:center;display:block">—</span>`;
+
+      return `<div class="adv-skill-col" style="border-color:${col_colour}22">
+        <div class="adv-skill-header" style="color:${col_colour}">
+          <span class="adv-sk-letter">${SKILL_N[skill]}</span>
+          <span class="adv-sk-count">${colPlayers.length}p</span>
+        </div>
+        ${chips}
       </div>`;
     }).join('');
   }
