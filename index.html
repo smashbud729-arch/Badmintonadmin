@@ -332,7 +332,8 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 [data-theme="dark"] .gc-badge{background:#0D2B40;color:var(--male);border-color:#1A4A6A}
 [data-theme="gold"] .gc-badge{background:#1A1500;color:var(--pk);border-color:#3A3000}
 /* Streak badge */
-.streak-badge{display:inline-flex;align-items:center;gap:2px;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;background:#FFF4E0;color:#C06020;border:1px solid #F0C060}
+.streak-badge{display:inline-flex;align-items:center;gap:2px;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;background:#FFF4E0;color:#C06020;border:1px solid #F0C060;animation:streak-flicker 1.2s ease-in-out infinite}
+@keyframes streak-flicker{0%,100%{box-shadow:0 0 3px #FF990066;opacity:1}40%{box-shadow:0 0 8px #FF6600CC;opacity:0.85}70%{box-shadow:0 0 5px #FF9900AA;opacity:0.95}}
 [data-theme="dark"] .streak-badge{background:#2A1800;color:#F0C060;border-color:#5A4000}
 [data-theme="gold"] .streak-badge{background:#2A1800;color:var(--pk);border-color:#5A4000}
 /* Advanced matchmaking panel */
@@ -370,6 +371,16 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 /* Player items */
 .pl-item{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--b2);border:1px solid var(--gr);border-radius:8px;margin-bottom:6px;transition:all 0.15s}
+.pl-item.tier-pacer{border-color:#008080;animation:card-pacer 2.5s ease-in-out infinite}
+.pl-item.tier-tactician{border-color:#0080CC;animation:card-diamond 2.2s ease-in-out infinite}
+.pl-item.tier-deceiver{border-color:#7B2FBE;animation:card-epic 2s ease-in-out infinite}
+.pl-item.tier-strategist{border-color:#CC2020;animation:card-legend 1.8s ease-in-out infinite}
+.pl-item.tier-grandmaster{border-color:#CC6600;animation:card-mythic 1.5s ease-in-out infinite}
+@keyframes card-pacer{0%,100%{box-shadow:0 0 4px #00E5CC22}50%{box-shadow:0 0 10px #00E5CC55,0 0 20px #00E5CC22}}
+@keyframes card-diamond{0%,100%{box-shadow:0 0 4px #5BE5FF22}50%{box-shadow:0 0 12px #5BE5FF66,0 0 24px #5BE5FF22}}
+@keyframes card-epic{0%,100%{box-shadow:0 0 5px #CC80FF22}50%{box-shadow:0 0 14px #CC80FF77,0 0 28px #CC80FF22}}
+@keyframes card-legend{0%,100%{box-shadow:0 0 6px #FF606033}50%{box-shadow:0 0 16px #FF606088,0 0 32px #FF606022}}
+@keyframes card-mythic{0%,100%{box-shadow:0 0 8px #FF990033}50%{box-shadow:0 0 20px #FF9900AA,0 0 40px #FF990033}}
 .pl-item.sel-a{border-color:var(--male);background:#F0F4FF}
 .pl-item.sel-b{border-color:var(--pk);background:var(--b3)}
 .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-weight:800;flex-shrink:0}
@@ -809,12 +820,30 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .mmr-bronze{background:#3D2400;color:#CD7F32;border:1px solid #8B5513}
 .mmr-silver{background:#1A1A2A;color:#C0C0C0;border:1px solid #808080}
 .mmr-gold{background:#2A2000;color:#FFD700;border:1px solid #B8860B}
-.mmr-platinum{background:#002020;color:#00E5CC;border:1px solid #008080}
-.mmr-diamond{background:#001030;color:#5BE5FF;border:1px solid #0080CC}
-.mmr-epic{background:#200030;color:#CC80FF;border:1px solid #7B2FBE}
-.mmr-legend{background:#300010;color:#FF6060;border:1px solid #CC2020}
-.mmr-mythic{background:#1A0800;color:#FF9900;border:1px solid #CC6600;animation:mythic-glow 2s ease-in-out infinite}
-@keyframes mythic-glow{0%,100%{box-shadow:0 0 4px #FF990055}50%{box-shadow:0 0 10px #FF9900AA}}
+.mmr-platinum{background:#002020;color:#00E5CC;border:1px solid #008080;animation:pacer-glow 2.5s ease-in-out infinite}
+.mmr-diamond{background:#001030;color:#5BE5FF;border:1px solid #0080CC;animation:diamond-glow 2.2s ease-in-out infinite}
+.mmr-epic{background:#200030;color:#CC80FF;border:1px solid #7B2FBE;animation:epic-glow 2s ease-in-out infinite}
+.mmr-legend{background:#300010;color:#FF6060;border:1px solid #CC2020;animation:legend-glow 1.8s ease-in-out infinite}
+.mmr-mythic{background:#1A0800;color:#FF9900;border:1px solid #CC6600;animation:mythic-glow 1.5s ease-in-out infinite}
+@keyframes pacer-glow{0%,100%{box-shadow:0 0 4px #00E5CC44}50%{box-shadow:0 0 10px #00E5CCAA,0 0 18px #00E5CC44}}
+@keyframes diamond-glow{0%,100%{box-shadow:0 0 4px #5BE5FF44}50%{box-shadow:0 0 12px #5BE5FFBB,0 0 22px #5BE5FF55}}
+@keyframes epic-glow{0%,100%{box-shadow:0 0 5px #CC80FF55}50%{box-shadow:0 0 14px #CC80FFCC,0 0 26px #CC80FF66}}
+@keyframes legend-glow{0%,100%{box-shadow:0 0 6px #FF606066}50%{box-shadow:0 0 16px #FF6060DD,0 0 30px #FF606077}}
+@keyframes mythic-glow{0%,100%{box-shadow:0 0 8px #FF990077}50%{box-shadow:0 0 20px #FF9900EE,0 0 36px #FF990088}}
+
+/* ── Rank-up overlay ── */
+#rankup-overlay{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#00000088;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity 0.3s}
+#rankup-overlay.show{opacity:1;pointer-events:auto}
+#rankup-box{background:linear-gradient(135deg,#1A1A1A,#000);border:2px solid var(--glow-col,#FFD700);border-radius:16px;padding:32px 40px;text-align:center;animation:rankup-pop 0.5s cubic-bezier(0.34,1.56,0.64,1)}
+@keyframes rankup-pop{from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}
+#rankup-overlay .ru-label{font-size:12px;font-weight:700;letter-spacing:0.15em;color:#AAAAAA;text-transform:uppercase;margin-bottom:6px}
+#rankup-overlay .ru-title{font-size:42px;font-weight:900;color:var(--glow-col,#FFD700);text-shadow:0 0 20px var(--glow-col,#FFD700);margin:4px 0}
+#rankup-overlay .ru-sub{font-size:16px;color:#FFFFFF;margin:8px 0 0}
+#rankup-overlay .ru-tiers{display:flex;align-items:center;gap:12px;justify-content:center;margin-top:14px}
+#rankup-overlay .ru-arrow{font-size:22px;color:#AAAAAA}
+
+/* ── Confetti canvas ── */
+#confetti-canvas{position:fixed;inset:0;z-index:9998;pointer-events:none}
 .mmr-delta-pos{font-size:10px;font-weight:700;color:#3DA06A}
 .mmr-delta-neg{font-size:10px;font-weight:700;color:#E8537A}
 [data-theme=dark] .mmr-bronze{background:#2A1800}
@@ -832,6 +861,17 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 
 
+
+<!-- ═══ RANK-UP OVERLAY ═══ -->
+<div id="rankup-overlay" onclick="closeRankUp()">
+  <div id="rankup-box">
+    <div class="ru-label">⬆ Rank Up!</div>
+    <div class="ru-title" id="ru-name"></div>
+    <div class="ru-sub" id="ru-sub"></div>
+    <div class="ru-tiers" id="ru-tiers"></div>
+  </div>
+</div>
+<canvas id="confetti-canvas"></canvas>
 
 <!-- ═══ MANAGER MODAL ═══ -->
 <div class="backdrop" id="mgr-modal">
@@ -1837,7 +1877,7 @@ function renderAllPlayers(){
   const sorted=[...S.players].sort((a,b)=>a.name.localeCompare(b.name));
   ap.innerHTML=sorted.length?sorted.map(p=>`
     <div>
-      <div class="pl-item" style="flex-direction:column;align-items:stretch;gap:6px">
+      <div class="pl-item ${(()=>{const t=mmrTier(p.mmr||1000);const map={'mmr-platinum':'tier-pacer','mmr-diamond':'tier-tactician','mmr-epic':'tier-deceiver','mmr-legend':'tier-strategist','mmr-mythic':'tier-grandmaster'};return map[t.cls]||'';})()}" style="flex-direction:column;align-items:stretch;gap:6px">
         <!-- Row 1: avatar + name + skill badge -->
         <div style="display:flex;align-items:center;gap:8px;min-width:0">
           ${avHtml(p)}
@@ -1947,7 +1987,20 @@ function endMatch(ci,winner){
   const winners=winner===1?m.team1:m.team2,losers=winner===1?m.team2:m.team1;
   winners.forEach(p=>{p.wins++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
   losers.forEach(p=>{p.losses++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
+  const prevTiers=Object.fromEntries([...winners,...losers].map(p=>[p.id,mmrTier(p.mmr||1000).name]));
   const mmrDeltas=calcMMR(winners,losers,m.score1,m.score2);
+  // Rank-up detection
+  setTimeout(()=>{
+    [...winners,...losers].forEach(p=>{
+      const newTier=mmrTier(p.mmr||1000);
+      if(newTier.name!==prevTiers[p.id]){
+        const oldName=prevTiers[p.id];
+        showRankUp(p.name,oldName,newTier);
+      }
+    });
+  },600);
+  // "On fire" toast for 3+ consecutive wins
+  winners.forEach(p=>{if(getWinStreak(p)>=3)setTimeout(()=>toast('🔥 '+p.name+' is on fire! '+getWinStreak(p)+' win streak!'),800);});
   const entry={
     time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
     mode:m.mode,court:court.id,duration:fmtTime(court.elapsed),
@@ -2378,7 +2431,8 @@ function renderQueueList(){
     const streak=getWinStreak(p);
     const streakBadge=streak>=3?`<span class="streak-badge">🔥 ${streak} streak</span>`:'';
     const formDots=getFormDots(p);
-    return `<div class="pl-item ${inA?'sel-a':inB?'sel-b':''}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
+    const tierCls=(()=>{const t=mmrTier(p.mmr||1000);const map={'mmr-platinum':'tier-pacer','mmr-diamond':'tier-tactician','mmr-epic':'tier-deceiver','mmr-legend':'tier-strategist','mmr-mythic':'tier-grandmaster'};return map[t.cls]||'';})();
+    return `<div class="pl-item ${inA?'sel-a':inB?'sel-b':''} ${tierCls}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
       <div class="q-pos">${i+1}</div>${avHtml(p)}
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${tBadge}${recentBadge}${gcBadge}${streakBadge}${formDots}</div>
@@ -3203,7 +3257,7 @@ function showMatchRecap(entry,courtId,elapsed){
   document.getElementById('recap-stats').innerHTML=[...sLines,...mLines].join('')||'';
   bd.classList.add('open');
 }
-function closeRecapModal(){document.getElementById('recap-modal-backdrop').classList.remove('open');}
+function closeRecapModal(){document.getElementById('recap-modal-backdrop').classList.remove('open');launchConfetti();}
 
 /* ── 4. COURT TIMER ALERT ── */
 const COURT_TIME_LIMIT_MIN=30;
@@ -3398,6 +3452,68 @@ function showQR(){
   // Use free QR API
   if(img)img.innerHTML=`<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" alt="QR" style="width:200px;height:200px;border-radius:6px"/>`;
   bd.classList.add('open');
+}
+
+/* ── VISUAL FX ── */
+
+// Tier colour map for glow effects
+const TIER_GLOW={
+  'mmr-platinum':'#00E5CC','mmr-diamond':'#5BE5FF',
+  'mmr-epic':'#CC80FF','mmr-legend':'#FF6060','mmr-mythic':'#FF9900'
+};
+
+// ── Rank-up overlay ──
+function showRankUp(playerName,oldTier,newTier){
+  const ov=document.getElementById('rankup-overlay');
+  const box=document.getElementById('rankup-box');
+  const col=TIER_GLOW[newTier.cls]||'#FFD700';
+  box.style.setProperty('--glow-col',col);
+  box.style.borderColor=col;
+  document.getElementById('ru-name').textContent='⬆ RANK UP!';
+  document.getElementById('ru-name').style.color=col;
+  document.getElementById('ru-name').style.textShadow='0 0 20px '+col;
+  document.getElementById('ru-sub').textContent=playerName+' has ranked up!';
+  document.getElementById('ru-tiers').innerHTML=
+    `<span style="opacity:0.6;font-size:13px">${oldTier}</span>`+
+    `<span class="ru-arrow">→</span>`+
+    `<span style="color:${col};font-weight:800;font-size:16px">${newTier.icon} ${newTier.name}</span>`;
+  ov.classList.add('show');
+  setTimeout(()=>closeRankUp(),4000);
+}
+function closeRankUp(){document.getElementById('rankup-overlay').classList.remove('show');}
+
+// ── Confetti burst ──
+function launchConfetti(){
+  const canvas=document.getElementById('confetti-canvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  const pieces=Array.from({length:120},()=>({
+    x:Math.random()*canvas.width,y:-10,
+    w:6+Math.random()*8,h:10+Math.random()*10,
+    r:Math.random()*Math.PI*2,
+    dx:(Math.random()-0.5)*4,dy:2+Math.random()*4,
+    dr:(Math.random()-0.5)*0.2,
+    col:['#FFD700','#FF6060','#5BE5FF','#CC80FF','#00E5CC','#FF9944','#FFFFFF'][Math.floor(Math.random()*7)],
+    alpha:1
+  }));
+  let frame;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive=false;
+    pieces.forEach(p=>{
+      p.x+=p.dx;p.y+=p.dy;p.r+=p.dr;p.alpha-=0.008;
+      if(p.alpha>0&&p.y<canvas.height){alive=true;}
+      ctx.save();ctx.globalAlpha=Math.max(0,p.alpha);
+      ctx.translate(p.x,p.y);ctx.rotate(p.r);
+      ctx.fillStyle=p.col;
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    if(alive)frame=requestAnimationFrame(draw);
+    else{ctx.clearRect(0,0,canvas.width,canvas.height);}
+  }
+  if(frame)cancelAnimationFrame(frame);
+  draw();
 }
 
 /* ── 13. BULK QUEUE TOGGLE ── */
