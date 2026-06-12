@@ -2463,23 +2463,14 @@ function renderCourts(){
         </div>
       </div>`;
     }
-    const sug=genMatches(cm)[0];
     return `<div class="court-card">
       <div class="court-hdr">
         <input class="court-nick-inp" value="${S.courtNicknames[i]||'Court '+court.id}" onchange="saveCourtNick(${i},this.value)" onclick="this.select()" title="Click to rename this court"/>${modePills}
         <div style="margin-left:auto;display:flex;align-items:center;gap:5px"><span style="font-size:10px;color:var(--gr4)">Idle</span><div class="status-dot dot-idle"></div></div>
       </div>
-      ${sug?`<div class="sug-box">
-        <div class="sug-lbl"><span>Best ${cm} match</span><span style="margin-left:auto;color:var(--pk);font-weight:700">${sug.balance}% balanced</span></div>
-        <div class="match-grid">
-          <div class="tc ta">${sug.team1.map(p=>pChip(p,true)).join('')}</div>
-          <div class="vs" style="font-size:15px">VS</div>
-          <div class="tc tb">${sug.team2.map(p=>pChip(p,false)).join('')}</div>
-        </div>
-        <div class="bal-bar"><div class="bal-fill" style="width:${sug.balance}%"></div></div>
+      <div class="court-empty" style="padding:18px 0;color:var(--gr3);font-size:12px;text-align:center">
+        ⚙ Use Advanced Matchmaking to assign players to this court
       </div>
-      <div class="court-actions"><button class="btn btn-g btn-sm" onclick="startMatch(${i})">▶ Start Match</button></div>`
-      :`<div class="court-empty">Need more queued players for a ${cm} match</div>`}
     </div>`;
   }).join('');
 }
