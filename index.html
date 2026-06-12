@@ -4223,7 +4223,7 @@ async function downloadPlayerCard(pid_){
   ].filter(Boolean)[0];
 
   // ── HQ Canvas — 3× retina ──
-  const W=520,H=460,DPR=3;
+  const W=520,H=560,DPR=3;
   const cv=document.createElement('canvas');
   cv.width=W*DPR;cv.height=H*DPR;
   cv.style.width=W+'px';cv.style.height=H+'px';
@@ -4377,10 +4377,56 @@ async function downloadPlayerCard(pid_){
     ctx.fillText('🤝 Best partner: '+bestPartner[0]+' ('+bestPartner[1]+'W together)',16,lineY+22);
   }
 
+  // ══ ACHIEVEMENTS SECTION ══
+  const achs=getAchievements(p);
+  const unlockedAchs=achs.filter(a=>a.unlocked);
+  const achSectionY=lineY+38;
+
+  // Section divider
+  ctx.strokeStyle=m.col+'33';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(16,achSectionY-6);ctx.lineTo(W-16,achSectionY-6);ctx.stroke();
+
+  // Section header
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillStyle=m.col;ctx.font='bold 9px Arial';
+  ctx.fillText('🏅  ACHIEVEMENTS ('+unlockedAchs.length+'/'+achs.length+')',16,achSectionY+6);
+
+  // Draw achievement pills in a wrapping grid
+  const PILL_H=22,PILL_GAP_X=6,PILL_GAP_Y=5,PILL_START_Y=achSectionY+14;
+  let pillX=16,pillY=PILL_START_Y;
+  ctx.font='bold 10px Arial';
+
+  // Draw unlocked first, then locked
+  const achOrder=[...unlockedAchs,...achs.filter(a=>!a.unlocked)];
+  achOrder.forEach(a=>{
+    const pillTxt=a.icon+' '+a.label;
+    const pillW=ctx.measureText(pillTxt).width+16;
+    // Wrap to next row if needed
+    if(pillX+pillW>W-16){pillX=16;pillY+=PILL_H+PILL_GAP_Y;}
+    if(a.unlocked){
+      ctx.fillStyle=a.bg;roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.fill();
+      ctx.strokeStyle=a.border;ctx.lineWidth=1;
+      roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.stroke();
+      ctx.fillStyle=a.col;
+    } else {
+      ctx.fillStyle='#111111';roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.fill();
+      ctx.strokeStyle='#2A2A2A';ctx.lineWidth=1;
+      roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.stroke();
+      ctx.fillStyle='#333333';
+    }
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(pillTxt,pillX+pillW/2,pillY+PILL_H/2);
+    pillX+=pillW+PILL_GAP_X;
+  });
+
   // ══ BOTTOM STRIP ══
-  const stripY=H-44;
-  ctx.fillStyle='#FFFFFF06';
-  roundRectPath(ctx,0,stripY,W,42,0);ctx.fill();
+  const achEndY=pillY+PILL_H+14;
+  const stripY=achEndY;
+  // Clip bottom strip to card boundary using a thin separator instead
+  ctx.strokeStyle=m.col+'22';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(16,stripY-2);ctx.lineTo(W-16,stripY-2);ctx.stroke();
+  ctx.fillStyle='#FFFFFF05';
+  ctx.fillRect(0,stripY,W,42);
 
   // QR code in bottom-right
   const qrData='Whack // '+p.name+' | '+t.icon+' '+m.label+' ('+(p.mmr||1000)+' MMR) | '+p.wins+'W '+p.losses+'L '+wr_+'%WR'+(streak>0?' | Streak:'+streak+'W':'');
