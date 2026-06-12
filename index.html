@@ -1074,20 +1074,6 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
       <div class="slist" id="queue-list"></div>
     </div>
     <div>
-      <!-- SMASH HUB SUGGESTIONS -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
-        <div class="sug-title">🏸 Whack Suggestions</div>
-        <div style="display:flex;gap:5px;align-items:center">
-          <div id="sug-mode-toggle" class="mode-toggle">
-            <button class="mt-pill sel-d" data-mode="doubles" onclick="setSugMode('doubles')">Doubles</button>
-            <button class="mt-pill"       data-mode="singles" onclick="setSugMode('singles')">Singles</button>
-            <button class="mt-pill"       data-mode="mixed"   onclick="setSugMode('mixed')">Mixed</button>
-          </div>
-          <button class="btn btn-o btn-xs" onclick="refreshSuggestions()" title="Refresh">↻</button>
-        </div>
-      </div>
-      <div id="suggestions-wrap"></div>
-      <div class="gdiv"></div>
       <!-- ADVANCED MATCHMAKING — 3 independent panels -->
       <div class="sh" style="margin-bottom:8px">
         <div class="st">⚙ Advanced Matchmaking</div>
@@ -2282,52 +2268,7 @@ function genMatches(mode){
   return results;
 }
 
-/* ── Suggestion mode ── */
-function setSugMode(mode){
-  S.sugMode=mode;
-  document.querySelectorAll('#sug-mode-toggle .mt-pill').forEach(b=>{b.className='mt-pill'+(b.dataset.mode===mode?' sel-'+mode[0]:'')});
-  renderSuggestions();
-}
-function refreshSuggestions(){renderSuggestions();toast('Suggestions refreshed ↻')}
-
-function renderSuggestions(){
-  const sw=document.getElementById('suggestions-wrap');if(!sw)return;
-  const onCourt=S.players.filter(p=>p.onCourt).length;
-  const sugs=genMatches(S.sugMode);
-  let html='';
-  if(onCourt>0) html+=`<div class="info-note">⚠ <b>${onCourt} player${onCourt>1?'s are':' is'}</b> currently on court and excluded from suggestions.</div>`;
-  if(!sugs.length){html+=`<div class="empty-state">No ${S.sugMode} matches possible.<br>Try a different mode or add more players.</div>`;sw.innerHTML=html;updateBuilderUI();return}
-  html+=sugs.map((s,idx)=>`
-    <div class="sug-box">
-      <div class="sug-lbl">
-        <span>Option ${idx+1}</span>
-        <span class="mode-tag ${MODE_C[s.mode]||'md'}">${s.mode}</span>
-        ${s.genderWarning?`<span style="font-size:9px;color:#E8A04C;border:1px solid #E8A04C55;border-radius:2px;padding:1px 5px">⚠ Gender imbalance</span>`:''}
-        ${s.rematchWarning?`<span style="font-size:9px;color:#C06020;border:1px solid #C0602055;border-radius:2px;padding:1px 5px">🔄 Rematch</span>`:''}
-        <span style="margin-left:auto;color:var(--pk);font-weight:700">${s.balance}% balanced</span>
-      </div>
-      <div class="match-grid">
-        <div class="tc ta" style="font-size:11px">${s.team1.map(p=>`<div style="font-weight:600;text-align:right">${p.name}</div>`).join('')}</div>
-        <div class="vs" style="font-size:13px">VS</div>
-        <div class="tc tb" style="font-size:11px">${s.team2.map(p=>`<div style="font-weight:600">${p.name}</div>`).join('')}</div>
-      </div>
-      <div class="bal-bar"><div class="bal-fill" style="width:${s.balance}%"></div></div>
-      <div class="bal-pct">${s.balance}% balance</div>
-      <div class="court-assign-row">
-        <span class="court-assign-lbl">▶ Start on:</span>
-        ${S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" onclick="${c.status==='idle'?`startSugMatch(${ci},${idx},'${S.sugMode}')`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('')}
-      </div>
-    </div>`).join('');
-  sw.innerHTML=html;updateBuilderUI();
-}
-
-function startSugMatch(ci,idx,mode){
-  const sugs=genMatches(mode);
-  if(!sugs[idx]){toast('Suggestion expired — please refresh');renderSuggestions();return}
-  startMatch(ci,sugs[idx]);          // auto-starts the match immediately
-  showView('courts');                 // jump to Courts tab so you see the timer live
-  toast('Match started on Court '+(ci+1)+' ▶');
-}
+/* ── Suggestion functions removed ── */
 
 /* ── Manual builder ── */
 function setBuilderMode(mode){
@@ -2606,7 +2547,7 @@ function render(){
   document.getElementById('h-queue').textContent=qAvail;
   document.getElementById('h-courts').textContent=S.courts.length;
   document.getElementById('h-matches').textContent=S.log.length;
-  renderCourts();renderQueueList();renderSuggestions();updateBuilderUI();
+  renderCourts();renderQueueList();updateBuilderUI();
   const advPanel=document.getElementById('adv-mm-panels-wrap');
   if(advPanel) for(let i=0;i<ADV_COUNT;i++) if(ADV_OPEN[i]) renderAdvPanel(i);
 
