@@ -819,6 +819,20 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 /* Rivalry tracker */
 .rivalry-chip{background:var(--b3);border:1px solid var(--pkl);border-radius:6px;padding:7px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:11px}
 
+/* ── Share Card Preview Modal ── */
+#share-preview-modal{position:fixed;inset:0;z-index:10001;display:flex;align-items:flex-end;justify-content:center;background:#000000BB;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 0.25s}
+#share-preview-modal.show{opacity:1;pointer-events:auto}
+#share-preview-box{background:#111;border:1px solid #333;border-radius:16px 16px 0 0;padding:16px;width:100%;max-width:500px;display:flex;flex-direction:column;align-items:center;gap:12px;animation:slide-up 0.3s cubic-bezier(.34,1.2,.64,1)}
+@keyframes slide-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+#share-preview-box img{width:100%;max-width:440px;border-radius:10px;box-shadow:0 4px 24px #00000088}
+.share-btn-row{display:flex;gap:8px;width:100%;max-width:440px}
+.share-btn-row button{flex:1;padding:13px 8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity 0.15s}
+.share-btn-row button:active{opacity:0.8}
+#share-btn-native{background:#E8537A;color:#fff;font-size:15px}
+#share-btn-download{background:#222;color:#888;border:1px solid #333 !important;font-size:13px}
+#share-btn-cancel{background:#1A1A1A;color:#555;border:1px solid #2A2A2A !important}
+#share-preview-hint{font-size:11px;color:#444;text-align:center}
+
 /* ── Avatar Crop Modal ── */
 #avatar-crop-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#000000CC;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 0.25s}
 #avatar-crop-modal.show{opacity:1;pointer-events:auto}
@@ -935,6 +949,21 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 
 
+
+<!-- ═══ SHARE CARD PREVIEW MODAL ═══ -->
+<div id="share-preview-modal" onclick="if(event.target===this)closeSharePreview()">
+  <div id="share-preview-box">
+    <div style="width:40px;height:4px;background:#333;border-radius:2px;margin-bottom:4px"></div>
+    <div style="font-size:12px;font-weight:700;color:#888;letter-spacing:0.06em">SHARE PLAYER CARD</div>
+    <img id="share-preview-img" src="" alt="Player Card"/>
+    <div class="share-btn-row">
+      <button id="share-btn-native" onclick="triggerNativeShare()">↗ Share</button>
+      <button id="share-btn-download" onclick="triggerCardDownload()">⬇ Save</button>
+      <button id="share-btn-cancel" onclick="closeSharePreview()">✕</button>
+    </div>
+    <div id="share-preview-hint">Tap Share to send via WhatsApp, Facebook, Instagram &amp; more</div>
+  </div>
+</div>
 
 <!-- ═══ AVATAR CROP MODAL ═══ -->
 <div id="avatar-crop-modal">
@@ -4193,41 +4222,82 @@ async function downloadPlayerCard(pid_){
   return cv;
 }
 
+// ── Share card state ──
+let _shareBlob=null, _shareFilename='', _sharePlayer=null;
+
 async function sharePlayerCard(pid_){
   const p=S.players.find(x=>x.id===pid_);if(!p)return;
-  toast('⏳ Generating card…');
+  _sharePlayer=p;
+  _shareFilename=(p.name.replace(/\s+/g,'_'))+'_WhackCard.png';
+
+  // Show modal immediately with spinner
+  const img=document.getElementById('share-preview-img');
+  const modal=document.getElementById('share-preview-modal');
+  const hint=document.getElementById('share-preview-hint');
+  if(img)img.src='';
+  if(hint)hint.textContent='Generating card…';
+  const nativeBtn=document.getElementById('share-btn-native');
+  if(nativeBtn){nativeBtn.disabled=true;nativeBtn.textContent='⏳ Building…';}
+  if(modal)modal.classList.add('show');
+
+  // Generate card in background
   let cv;
-  try{ cv=await downloadPlayerCard(pid_); }catch(e){ toast('⚠ Card generation failed'); return; }
-  if(!cv)return;
+  try{ cv=await downloadPlayerCard(pid_); }
+  catch(e){ toast('⚠ Card generation failed');closeSharePreview();return; }
+  if(!cv){closeSharePreview();return;}
 
-  const filename=(p.name.replace(/\s+/g,'_'))+'_WhackCard.png';
+  // Convert to blob once — reuse for both share and download
+  _shareBlob=await new Promise(res=>cv.toBlob(res,'image/png',1.0));
+  const dataUrl=URL.createObjectURL(_shareBlob);
 
-  // Try Web Share API (mobile native share sheet)
-  if(navigator.canShare){
-    try{
-      const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
-      const file=new File([blob],filename,{type:'image/png'});
-      if(navigator.canShare({files:[file]})){
-        await navigator.share({
-          files:[file],
-          title:p.name+"'s Whack Profile",
-          text:p.name+' is a '+((TIER_META[mmrTier(p.mmr||1000).cls]||{}).label||'player')+' on Whack Badminton 🏸',
-        });
-        toast('✅ Card shared!');
-        return;
-      }
-    }catch(e){
-      if(e.name!=='AbortError') console.warn('Share failed, falling back to download:',e);
-      else return; // user cancelled — do nothing
-    }
+  // Show preview image
+  if(img){img.src=dataUrl;}
+
+  // Check if native share with files is supported
+  const canNativeShare=navigator.share&&navigator.canShare&&
+    navigator.canShare({files:[new File([_shareBlob],_shareFilename,{type:'image/png'})]});
+
+  if(nativeBtn){
+    nativeBtn.disabled=false;
+    nativeBtn.textContent=canNativeShare?'↗ Share':'↗ Share';
   }
+  if(hint){
+    hint.textContent=canNativeShare
+      ?'Tap Share → choose WhatsApp, Facebook, Instagram & more'
+      :'Tap Save to download, then share from your photos';
+  }
+}
 
-  // Fallback — straight download
-  const link=document.createElement('a');
-  link.download=filename;
-  link.href=cv.toDataURL('image/png');
-  link.click();
-  toast('📥 Card saved — '+p.name+'!');
+// Called by the Share button — fires DIRECTLY from user tap (no async delay = gesture preserved)
+function triggerNativeShare(){
+  if(!_shareBlob||!_sharePlayer)return;
+  const file=new File([_shareBlob],_shareFilename,{type:'image/png'});
+  const tier=(TIER_META[mmrTier(_sharePlayer.mmr||1000).cls]||{}).label||'player';
+  const text=_sharePlayer.name+' is a '+tier+' on Whack Badminton 🏸';
+
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:_sharePlayer.name+"'s Whack Card",text})
+      .then(()=>{toast('✅ Shared!');closeSharePreview();})
+      .catch(e=>{if(e.name!=='AbortError'){triggerCardDownload();}else{closeSharePreview();}});
+  } else {
+    // Fallback for desktop — copy dataURL to clipboard or download
+    triggerCardDownload();
+  }
+}
+
+function triggerCardDownload(){
+  if(!_shareBlob)return;
+  const url=URL.createObjectURL(_shareBlob);
+  const a=document.createElement('a');a.href=url;a.download=_shareFilename;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  toast('📥 Card saved!');
+  closeSharePreview();
+}
+
+function closeSharePreview(){
+  const modal=document.getElementById('share-preview-modal');
+  if(modal)modal.classList.remove('show');
+  _shareBlob=null;_sharePlayer=null;
 }
 
 /* ── VISUAL FX ── */
