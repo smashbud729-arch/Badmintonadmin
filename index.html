@@ -853,6 +853,41 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 #crop-confirm-btn{background:#E8537A;color:#fff}
 #crop-confirm-btn:hover{background:#C0406A}
 
+/* ── Season Banner ── */
+.season-banner{background:linear-gradient(135deg,#1A0A00,#0A0A00);border:1px solid #CC6600;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.season-badge{background:#1A0A00;border:1px solid #CC6600;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:800;color:#FF9900;letter-spacing:0.06em;animation:mythic-glow 2s ease-in-out infinite}
+.season-trophy{font-size:32px;flex-shrink:0}
+.season-champ{font-size:11px;color:var(--gr4)}
+.season-champ b{color:#FFD700}
+
+/* ── Achievement Badges ── */
+.ach-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ach-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid;position:relative;cursor:default}
+.ach-badge.locked{opacity:0.25;filter:grayscale(1)}
+.ach-badge[title]:hover::after{content:attr(title);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#111;border:1px solid #333;color:#CCC;font-size:9px;padding:4px 8px;border-radius:6px;white-space:nowrap;z-index:999;pointer-events:none}
+
+/* ── Session MVP Banner ── */
+#session-mvp-banner{border-radius:12px;padding:14px;margin-bottom:12px;display:none}
+
+/* ── MMR Sparkline ── */
+.mmr-sparkline{width:100%;height:48px;display:block}
+
+/* ── Queue Search & Compact Toggle ── */
+.queue-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.queue-search{flex:1;min-width:100px;padding:5px 10px;border-radius:8px;border:1px solid var(--gr2);background:var(--b3);color:var(--w);font-size:12px}
+.queue-search::placeholder{color:var(--gr3)}
+.compact-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--gr2);background:var(--b3);color:var(--gr4);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.15s}
+.compact-btn.active{background:var(--pk);border-color:var(--pk);color:#fff}
+
+/* Compact queue card */
+.pl-item.compact{padding:4px 8px;margin-bottom:3px;border-radius:6px}
+.pl-item.compact .pl-meta{display:none}
+.pl-item.compact .gc-badge,.pl-item.compact .streak-badge,.pl-item.compact .form-dot{display:none}
+.pl-item.compact .mmr-badge{display:none}
+.pl-item.compact .sk{display:none}
+.pl-item.compact .btn-red{padding:2px 6px;font-size:9px}
+.pl-item.compact .q-pos{font-size:13px;width:16px}
+
 /* ── Favourite Shot Badge ── */
 .shot-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;border:1px solid;text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0}
 
@@ -1100,6 +1135,11 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
         <button class="sort-btn" data-sort="mmr" onclick="setQueueSort('mmr')">MMR</button>
       </div>
       <div class="info-note">Players who <b>just finished</b> are shown with a "Just played" tag and deprioritised by the algorithm — giving everyone a fair turn.</div>
+      <!-- Queue toolbar: search + compact toggle -->
+      <div class="queue-toolbar">
+        <input class="queue-search" id="queue-search" placeholder="🔍 Search player…" oninput="renderQueueList()" type="search"/>
+        <button class="compact-btn" id="compact-btn" onclick="toggleCompactQueue()">⊟ Compact</button>
+      </div>
       <div class="slist" id="queue-list"></div>
     </div>
     <div>
@@ -1209,6 +1249,12 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
       <button class="btn btn-xs btn-o" style="font-size:10px" onclick="relinkAllPlayersFromDB()" title="Re-merge career stats from Supabase">☁ Sync Career Stats</button>
     </div>
   </div>
+
+  <!-- Season Banner -->
+  <div id="season-banner-wrap"></div>
+
+  <!-- Session MVP Banner -->
+  <div id="session-mvp-banner"></div>
 
   <!-- Overall Rankings -->
   <div id="lb-overall-panel">
@@ -1342,7 +1388,9 @@ let S={
   editingName:null,      // player id currently having name edited
   announcement:'',       // session announcement text
   courtNicknames:{},     // court index -> custom name
-  soundOn:true           // sound effects enabled
+  soundOn:true,          // sound effects enabled
+  queueCompact:false,    // compact queue view
+  season:{id:null,champion:null}  // season tracking
 };
 const overtimeAlerted=new Set(); // courts already alerted for overtime this match
 
@@ -1373,6 +1421,7 @@ function saveSession(){
       manager: S.manager,
       pay: S.pay,
       queueSort: S.queueSort,
+      season: S.season,
       currentSessionId: currentSessionId,
       advStates: ADV_STATES.map(st=>({
         pool: st.pool,
@@ -1402,6 +1451,7 @@ function restoreSession(){
     S.log      = snap.log      || [];
     S.nextId   = snap.nextId   || 1;
     S.sugMode  = snap.sugMode  || 'doubles';
+    if(snap.season)S.season=snap.season;
     S.manager  = snap.manager  || {name:'',date:'',venue:''};
     S.queueSort= snap.queueSort|| 'fairness';
     S.pay      = snap.pay      || {};
@@ -2132,10 +2182,17 @@ function endMatch(ci,winner){
   losers.forEach(p=>{p.losses++;p.onCourt=false;p.inQueue=true;p.lastMatchAt=matchIdx+1;S.queue.push(p.id)});
   const prevTiers=Object.fromEntries([...winners,...losers].map(p=>[p.id,mmrTier(p.mmr||1000).name]));
   const mmrDeltas=calcMMR(winners,losers,m.score1,m.score2);
-  // Update best streak
+  // Update best streak + giant slayer achievement
   [...winners,...losers].forEach(p=>{
     const s=getWinStreak(p);
     if(s>(p.bestStreak||0))p.bestStreak=s;
+  });
+  checkGiantSlayer(winners,losers);
+  // Track MMR history for sparkline (keep last 20 data points per player)
+  [...winners,...losers].forEach(p=>{
+    if(!p.mmrHistory)p.mmrHistory=[];
+    p.mmrHistory.push(p.mmr||1000);
+    if(p.mmrHistory.length>20)p.mmrHistory.shift();
   });
   // Rank-up detection
   setTimeout(()=>{
@@ -2504,13 +2561,22 @@ function renderCourts(){
   }).join('');
 }
 
+function toggleCompactQueue(){
+  S.queueCompact=!S.queueCompact;
+  const btn=document.getElementById('compact-btn');
+  if(btn){btn.textContent=S.queueCompact?'⊞ Expand':'⊟ Compact';btn.classList.toggle('active',S.queueCompact);}
+  renderQueueList();
+}
+
 function renderQueueList(){
   const ql=document.getElementById('queue-list');if(!ql)return;
   // Only show players in queue and NOT on court
   const qp=S.queue.map(id=>pid(Number(id))).filter(p=>p&&!p.onCourt);
   const qcount=document.getElementById('q-count');
   if(qcount)qcount.textContent=qp.length+' waiting';
-  const sorted=sortedQueue(qp);
+  // Search filter
+  const searchVal=(document.getElementById('queue-search')?.value||'').toLowerCase().trim();
+  const sorted=sortedQueue(qp).filter(p=>!searchVal||p.name.toLowerCase().includes(searchVal));
   const b=S.builder;
 
   // How many courts are free to accept a new match
@@ -2545,7 +2611,7 @@ function renderQueueList(){
     const sep=(i===nextUpCount-1&&sorted.length>nextUpCount)
       ?`<div class="next-up-sep">· · · waiting · · ·</div>`:'';
 
-    const card=`<div class="pl-item ${isNextUp?'next-up':''} ${inA?'sel-a':inB?'sel-b':''} ${tierCls}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
+    const card=`<div class="pl-item ${S.queueCompact?'compact':''} ${isNextUp&&!S.queueCompact?'next-up':''} ${inA?'sel-a':inB?'sel-b':''} ${tierCls}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
       <div class="q-pos ${posCls}">${i+1}</div>${avHtml(p)}
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${tBadge}${recentBadge}${gcBadge}${streakBadge}${shotHtml(p,true)}${formDots}</div>
@@ -2621,9 +2687,73 @@ function lbRowHtml(p, i, wins, losses, matches, extra){
   </div>`;
 }
 
+function renderSeasonBanner(){
+  const wrap=document.getElementById('season-banner-wrap');if(!wrap)return;
+  const s=getCurrentSeason();
+  const countdown=getSeasonCountdown();
+  // Find season champion (highest MMR player)
+  const champ=S.players.length?[...S.players].sort((a,b)=>(b.mmr||1000)-(a.mmr||1000))[0]:null;
+  const prevChamp=S.season?.champion;
+  wrap.innerHTML=`<div class="season-banner">
+    <span class="season-trophy">🏆</span>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="season-badge">${s.name}</span>
+        <span style="font-size:10px;color:#888">${countdown}</span>
+      </div>
+      ${champ?`<div class="season-champ" style="margin-top:4px">Current Leader: <b>${champ.name}</b> · ${champ.mmr||1000} MMR</div>`:''}
+      ${prevChamp?`<div class="season-champ">Last Season Champion: <b>${prevChamp}</b></div>`:''}
+    </div>
+    <div style="font-size:10px;color:#555;text-align:right;flex-shrink:0">Resets<br>${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][s.endsMonth]} 30</div>
+  </div>`;
+}
+
+function renderSessionMVP(){
+  const el=document.getElementById('session-mvp-banner');if(!el)return;
+  if(!S.log.length){el.style.display='none';return;}
+  // Compute session stats
+  const wins={},losses={},mmrGain={};
+  S.players.forEach(p=>{mmrGain[p.name]=0;});
+  S.log.forEach(e=>{
+    e.winner.split(' & ').forEach(n=>{wins[n]=(wins[n]||0)+1;});
+    const loser=e.winner===e.t1?e.t2:e.t1;
+    loser.split(' & ').forEach(n=>{losses[n]=(losses[n]||0)+1;});
+    (e.mmrDeltas||[]).forEach(d=>{mmrGain[d.name]=(mmrGain[d.name]||0)+d.delta;});
+  });
+  const allNames=Object.keys(wins);if(!allNames.length){el.style.display='none';return;}
+  const mvp=allNames.sort((a,b)=>(wins[b]||0)-(wins[a]||0))[0];
+  const mvpP=S.players.find(p=>p.name===mvp);
+  const topGainer=Object.entries(mmrGain).sort((a,b)=>b[1]-a[1])[0];
+  const t=mvpP?mmrTier(mvpP.mmr||1000):null;
+  const m=t&&TIER_META[t.cls]?TIER_META[t.cls]:{col:'#FFD700',bg:'#1A1400',border:'#CC8800'};
+  el.style.display='block';
+  el.style.background=`linear-gradient(135deg,${m.bg},#000)`;
+  el.style.border=`1px solid ${m.border}`;
+  el.innerHTML=`<div style="font-size:9px;font-weight:700;color:${m.col};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">⭐ Session Highlights</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <div style="flex:1;min-width:120px">
+      <div style="font-size:10px;color:#555;margin-bottom:2px">MVP</div>
+      <div style="font-size:15px;font-weight:900;color:${m.col}">${mvp}</div>
+      <div style="font-size:10px;color:#888">${wins[mvp]||0} wins this session</div>
+    </div>
+    ${topGainer&&topGainer[1]>0?`<div style="flex:1;min-width:120px">
+      <div style="font-size:10px;color:#555;margin-bottom:2px">Most Improved</div>
+      <div style="font-size:15px;font-weight:900;color:#3DA06A">${topGainer[0]}</div>
+      <div style="font-size:10px;color:#888">+${topGainer[1]} MMR gained</div>
+    </div>`:''}
+    <div style="flex:1;min-width:120px">
+      <div style="font-size:10px;color:#555;margin-bottom:2px">Total Matches</div>
+      <div style="font-size:15px;font-weight:900;color:var(--w)">${S.log.length}</div>
+      <div style="font-size:10px;color:#888">played this session</div>
+    </div>
+  </div>`;
+}
+
 function renderLeaderboard(){
   // Only record/display leaderboard once the manager has been set up
-  if(!S.manager || !S.manager.name){
+  renderSeasonBanner();
+  renderSessionMVP();
+    if(!S.manager || !S.manager.name){
     const lb = document.getElementById('lb-list');
     const sessionEl = document.getElementById('lb-session-list');
     const noMgrMsg = `<div class="empty-state" style="padding:30px 16px">
@@ -3573,6 +3703,22 @@ function showQR(){
   bd.classList.add('open');
 }
 
+/* ── Season rollover check ── */
+function checkSeasonRollover(){
+  const current=getCurrentSeason();
+  if(S.season.id&&S.season.id!==current.id){
+    // New season started — archive champion
+    const oldChamp=[...S.players].sort((a,b)=>(b.mmr||1000)-(a.mmr||1000))[0];
+    S.season={id:current.id,champion:oldChamp?oldChamp.name:null};
+    autoSave();
+    toast('🏆 New season started: '+current.name+'! Season resets in progress.');
+    renderLeaderboard();
+  } else if(!S.season.id){
+    S.season.id=current.id;
+    autoSave();
+  }
+}
+
 /* ── PLAYER PROFILE VIEWER ── */
 
 const TIER_META={
@@ -3763,6 +3909,47 @@ function renderPlayerProfile(p){
       <span style="color:var(--gr4);font-size:9px;flex:0">Today</span>
     </div>
   </div>
+
+  <!-- MMR Sparkline -->
+  ${(()=>{
+    const hist=p.mmrHistory||[];
+    if(hist.length<2)return'';
+    const W=300,H=48,pad=4;
+    const mn=Math.min(...hist),mx=Math.max(...hist);
+    const range=mx-mn||1;
+    const pts=hist.map((v,i)=>{
+      const x=pad+(i/(hist.length-1))*(W-pad*2);
+      const y=H-pad-(v-mn)/range*(H-pad*2);
+      return x+','+y;
+    });
+    const col=(hist[hist.length-1]||1000)>=(hist[0]||1000)?'#3DA06A':'#E8537A';
+    const areaPoints='${pad},${H} '+pts.join(' ')+' ${W-pad},${H}';
+    return `<div class="pp-section">
+      <div class="pp-section-title">📈 MMR History (last ${hist.length} sessions)</div>
+      <svg class="mmr-sparkline" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${col}" stop-opacity="0.3"/><stop offset="100%" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+        <polygon points="${pts[0].split(',')[0]},${H} ${pts.join(' ')} ${pts[pts.length-1].split(',')[0]},${H}" fill="url(#sg)"/>
+        <polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="${pts[pts.length-1].split(',')[0]}" cy="${pts[pts.length-1].split(',')[1]}" r="3" fill="${col}"/>
+        <text x="${pad}" y="${H-2}" font-size="8" fill="#555">${mn}</text>
+        <text x="${W-pad}" y="${H-2}" font-size="8" fill="#555" text-anchor="end">${hist[hist.length-1]}</text>
+      </svg>
+    </div>`;
+  })()}
+
+  <!-- Achievements -->
+  ${(()=>{
+    const achs=getAchievements(p);
+    const unlocked=achs.filter(a=>a.unlocked);
+    const locked=achs.filter(a=>!a.unlocked);
+    return `<div class="pp-section">
+      <div class="pp-section-title">🏅 Achievements (${unlocked.length}/${achs.length})</div>
+      <div class="ach-grid">
+        ${unlocked.map(a=>`<span class="ach-badge" style="color:${a.col};background:${a.bg};border-color:${a.border}" title="${a.desc}">${a.icon} ${a.label}</span>`).join('')}
+        ${locked.map(a=>`<span class="ach-badge locked" style="color:#888;background:#111;border-color:#333" title="${a.desc}">🔒 ${a.label}</span>`).join('')}
+      </div>
+    </div>`;
+  })()}
 
   <!-- Highlights / Hype -->
   <div class="pp-hype" style="background:linear-gradient(135deg,${m.bg}88,#00000088);border-color:${m.border}88">
@@ -4391,6 +4578,44 @@ function detectUpset(entry){
 
 
 /* MMR ENGINE */
+// ── Season system (quarters: Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec) ──
+const SEASON_QUARTERS=[[1,3],[4,6],[7,9],[10,12]];
+const SEASON_NAMES=['Q1','Q2','Q3','Q4'];
+function getCurrentSeason(){
+  const now=new Date();
+  const y=now.getFullYear(),mo=now.getMonth()+1;
+  const qi=SEASON_QUARTERS.findIndex(([s,e])=>mo>=s&&mo<=e);
+  return {id:`${y}-${SEASON_NAMES[qi]}`,name:`Season ${SEASON_NAMES[qi]} ${y}`,year:y,quarter:qi+1,endsMonth:SEASON_QUARTERS[qi][1]};
+}
+function getSeasonCountdown(){
+  const now=new Date();
+  const s=getCurrentSeason();
+  const end=new Date(s.year,s.endsMonth,0,23,59,59);
+  const days=Math.ceil((end-now)/(1000*60*60*24));
+  return days>0?`${days} day${days!==1?'s':''} left`:'Ends today';
+}
+
+// ── Achievement definitions ──
+const ACHIEVEMENTS=[
+  {id:'first_win',   icon:'🏅',label:'First Win',    desc:'Win your first match',          col:'#FFD700',bg:'#2A2000',border:'#B8860B', check:p=>p.wins>=1},
+  {id:'ten_games',   icon:'🎮',label:'10-Game Club', desc:'Play 10 or more matches',       col:'#5BE5FF',bg:'#001030',border:'#0080CC', check:p=>(p.matches||0)>=10},
+  {id:'fifty_games', icon:'💯',label:'Veteran',      desc:'Play 50 matches',               col:'#CC80FF',bg:'#150020',border:'#7B2FBE', check:p=>(p.matches||0)>=50},
+  {id:'win_streak3', icon:'🔥',label:'On Fire',      desc:'Win 3 in a row',                col:'#FF6633',bg:'#1A0800',border:'#CC4400', check:p=>(p.bestStreak||0)>=3},
+  {id:'win_streak5', icon:'👑',label:'Dynasty',      desc:'Win 5 in a row',                col:'#FF9900',bg:'#1A0800',border:'#CC6600', check:p=>(p.bestStreak||0)>=5},
+  {id:'elite',       icon:'💎',label:'Elite',        desc:'Reach 70%+ win rate (10+ games)',col:'#5BE5FF',bg:'#001030',border:'#0080CC', check:p=>(p.matches||0)>=10&&(p.wins/(p.matches||1))>=0.7},
+  {id:'giant_slayer',icon:'⚡',label:'Giant Slayer', desc:'Beat a higher-tier opponent',   col:'#CC80FF',bg:'#150020',border:'#7B2FBE', check:p=>p.giantSlayer},
+  {id:'centurion',   icon:'🛡',label:'Centurion',    desc:'Play 100 matches',              col:'#00E5CC',bg:'#002020',border:'#008080', check:p=>(p.matches||0)>=100},
+  {id:'pacer_rank',  icon:'🔵',label:'Pacer+',       desc:'Reach Pacer rank or above',     col:'#00E5CC',bg:'#002020',border:'#008080', check:p=>(p.mmr||1000)>=1501},
+  {id:'grandmaster', icon:'👑',label:'Grandmaster',  desc:'Reach Grandmaster rank',        col:'#FF9900',bg:'#1A0800',border:'#CC6600', check:p=>(p.mmr||1000)>=3501},
+];
+function getAchievements(p){return ACHIEVEMENTS.map(a=>({...a,unlocked:a.check(p)}));}
+function checkGiantSlayer(winners,losers){
+  // If avg MMR of winners is lower than losers, mark all winners as giant slayers
+  const avgW=winners.reduce((s,p)=>s+(p.mmr||1000),0)/winners.length;
+  const avgL=losers.reduce((s,p)=>s+(p.mmr||1000),0)/losers.length;
+  if(avgW<avgL-100) winners.forEach(p=>{p.giantSlayer=true;});
+}
+
 const SHOTS=[
   {key:'smash',   label:'Smash',    icon:'💥', col:'#FF4444', bg:'#2A0000', border:'#CC2222'},
   {key:'drop',    label:'Drop',     icon:'🪶', col:'#00E5CC', bg:'#002020', border:'#008080'},
@@ -4448,6 +4673,7 @@ setInterval(checkCourtTimers,30000);
 document.getElementById('mgr-date-inp').value=new Date().toISOString().slice(0,10);
 loadTheme();
 const _restored=restoreSession();
+checkSeasonRollover();
 if(!_restored) initCourts(3);
 restoreExtra();        // restore sound, announcement, court nicknames
 initNewStateFields();  // ensure new state fields exist
