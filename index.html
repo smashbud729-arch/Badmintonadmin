@@ -2195,6 +2195,8 @@ function endMatch(ci,winner){
     if(s>(p.seasonBestStreak||0))p.seasonBestStreak=s;
   });
   checkGiantSlayer(winners,losers);
+  // Persist streaks to DB immediately so they survive cross-device/session
+  [...winners,...losers].forEach(p=>dbSaveStreak(p));
   // Track MMR history for sparkline (keep last 20 data points per player)
   [...winners,...losers].forEach(p=>{
     if(!p.mmrHistory)p.mmrHistory=[];
@@ -2986,7 +2988,7 @@ async function dbSavePlayer(p){
   const sb=getSupabase();if(!sb)return;
   syncStatus('busy','Saving player…');
   const curSeason=getCurrentSeason();
-  const row={name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,wins:p.wins||0,losses:p.losses||0,matches:p.matches||0,mmr:p.mmr||1000,avatar:p.avatarB64||null,best_streak:p.bestStreak||0,season_best_streak:p.seasonBestStreak||0,season_id:curSeason.id};
+  const row={name:p.name,gender:p.gender,skill:p.skill,mode:p.mode,wins:p.wins||0,losses:p.losses||0,matches:p.matches||0,mmr:p.mmr||1000,avatar:p.avatarB64||null,best_streak:p.bestStreak||0,season_best_streak:p.seasonBestStreak||0,season_id:curSeason.id,fav_shot:p.favShot||null};
   let res;
   if(p.dbId){
     res=await sb.from('players').update(row).eq('id',p.dbId).select();
@@ -3009,7 +3011,7 @@ async function dbUpdatePlayerStats(p){
   const curSeason2=getCurrentSeason();
   const sBest=Math.max(p.bestStreak||0,db.best_streak||0);
   const sSeasonBest=curSeason2.id===(db.season_id||curSeason2.id)?Math.max(p.seasonBestStreak||0,db.season_best_streak||0):p.seasonBestStreak||0;
-  const res=await sb.from('players').update({wins:sW,losses:sL,matches:sM,mmr:sMmr,best_streak:sBest,season_best_streak:sSeasonBest,season_id:curSeason2.id}).eq('id',p.dbId);
+  const res=await sb.from('players').update({wins:sW,losses:sL,matches:sM,mmr:sMmr,best_streak:sBest,season_best_streak:sSeasonBest,season_id:curSeason2.id,fav_shot:p.favShot||null}).eq('id',p.dbId);
   if(res.error)console.error('Stats update error:',res.error);
   else{p.wins=sW;p.losses=sL;p.matches=sM;p.mmr=sMmr;p.bestStreak=sBest;p.seasonBestStreak=sSeasonBest;syncStatus('ok','Stats updated ✓');}
 }
@@ -3115,8 +3117,8 @@ async function loadFromDB(){
       players.forEach(row=>{
         let local=S.players.find(p=>p.dbId===row.id);
         if(!local)local=S.players.find(p=>p.name.toLowerCase()===row.name.toLowerCase());
-        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar)local.avatarB64=row.avatar;const dbBest=row.best_streak||0;const dbSeasonBest=row.season_best_streak!=null?row.season_best_streak:dbBest;local.bestStreak=Math.max(local.bestStreak||0,dbBest);local.seasonBestStreak=Math.max(local.seasonBestStreak||0,dbSeasonBest);merged++;}
-        else{const _dbBest=row.best_streak||0;const _dbSznBest=row.season_best_streak!=null?row.season_best_streak:_dbBest;S.players.push({id:S.nextId++,dbId:row.id,name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,mmr:row.mmr||1000,avatarB64:row.avatar||null,bestStreak:_dbBest,seasonBestStreak:_dbSznBest,inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0});added++;}
+        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar)local.avatarB64=row.avatar;const dbBest=row.best_streak||0;const dbSeasonBest=row.season_best_streak!=null?row.season_best_streak:dbBest;local.bestStreak=Math.max(local.bestStreak||0,dbBest);local.seasonBestStreak=Math.max(local.seasonBestStreak||0,dbSeasonBest);if(row.fav_shot&&!local.favShot)local.favShot=row.fav_shot;merged++;}
+        else{const _dbBest=row.best_streak||0;const _dbSznBest=row.season_best_streak!=null?row.season_best_streak:_dbBest;S.players.push({id:S.nextId++,dbId:row.id,name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,mmr:row.mmr||1000,avatarB64:row.avatar||null,bestStreak:_dbBest,seasonBestStreak:_dbSznBest,favShot:row.fav_shot||null,inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0});added++;}
       });
       // After load, re-apply any session streaks from S.log (in case session is active)
       S.players.forEach(p=>{
@@ -3910,7 +3912,7 @@ function renderPlayerProfile(p){
   <!-- Favourite Shot selector -->
   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">
     <span style="font-size:10px;color:var(--gr4);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Fav Shot:</span>
-    ${SHOTS.map(s=>`<button onclick="setFavShot(${p.id},'${s.key}')" style="padding:3px 9px;border-radius:10px;border:1px solid ${p.favShot===s.key?s.border:'var(--gr2)'};background:${p.favShot===s.key?s.bg:'transparent'};color:${p.favShot===s.key?s.col:'var(--gr4)'};font-size:10px;font-weight:700;cursor:pointer;transition:all 0.15s">${s.icon} ${s.label}</button>`).join('')}
+    ${SHOTS.map(s=>`<button onclick="setFavShot(${p.id},'${s.key}')" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;border:1px solid ${p.favShot===s.key?s.border:'var(--gr2)'};background:${p.favShot===s.key?s.bg:'transparent'};color:${p.favShot===s.key?s.col:'var(--gr4)'};cursor:pointer;transition:all 0.15s">${s.icon} ${s.label}</button>`).join('')}
   </div>
 
   <div class="pp-stats-row">
@@ -4165,7 +4167,23 @@ function setFavShot(pid_,key){
   const p=S.players.find(x=>x.id===pid_);if(!p)return;
   p.favShot=p.favShot===key?null:key;
   autoSave();renderPlayerProfile(p);
+  // Persist to Supabase immediately
+  const sb=getSupabase();
+  if(sb&&p.dbId){
+    sb.from('players').update({fav_shot:p.favShot||null}).eq('id',p.dbId)
+      .then(r=>{if(r.error)console.error('favShot save error:',r.error);else syncStatus('ok','Shot saved ✓');});
+  }
   if(p.favShot){const s=SHOTS.find(x=>x.key===p.favShot);toast(s.icon+' Favourite shot: '+s.label);}
+}
+
+// ── Save streak to DB immediately after a match ──
+async function dbSaveStreak(p){
+  const sb=getSupabase();if(!sb||!p.dbId)return;
+  await sb.from('players').update({
+    best_streak:p.bestStreak||0,
+    season_best_streak:p.seasonBestStreak||0,
+    season_id:getCurrentSeason().id
+  }).eq('id',p.dbId);
 }
 
 // ── QR toggle ──
