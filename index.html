@@ -4297,9 +4297,9 @@ async function downloadPlayerCard(pid_){
   if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=16;}
   ctx.fillStyle=m.col;ctx.fillRect(0,0,5,SCRATCH_H);ctx.shadowBlur=0;
 
-  // ══ HERO SECTION (Y: 0–140) ══
-  // Avatar — centred vertically in hero
-  const AX=62,AY=88,AR=50;
+  // ══ HERO SECTION ══
+  // Avatar — vertically centred against the text block (name Y≈44, pills Y≈82–102)
+  const AX=64,AY=62,AR=46;
   ctx.save();ctx.beginPath();ctx.arc(AX,AY,AR,0,Math.PI*2);ctx.clip();
   if(p.avatarB64){
     await new Promise(res=>{
@@ -4332,7 +4332,7 @@ async function downloadPlayerCard(pid_){
   // Name
   ctx.textAlign='left';ctx.textBaseline='alphabetic';
   ctx.fillStyle='#FFFFFF';ctx.font='bold 24px Arial Black,Arial';
-  ctx.fillText(p.name,126,44);
+  ctx.fillText(p.name,122,38);
 
   // Tier pill
   const tierLabel=t.icon+' '+m.label+'   '+(p.mmr||1000)+' MMR';
@@ -4340,13 +4340,13 @@ async function downloadPlayerCard(pid_){
   const tw=ctx.measureText(tierLabel).width+22;
   ctx.fillStyle=m.bg;ctx.strokeStyle=m.border;ctx.lineWidth=1.5;
   if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=6;}
-  roundRectPath(ctx,126,52,tw,22,11);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
-  ctx.fillStyle=m.col;ctx.textBaseline='middle';ctx.fillText(tierLabel,138,63);
+  roundRectPath(ctx,122,46,tw,22,11);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle=m.col;ctx.textBaseline='middle';ctx.fillText(tierLabel,134,57);
 
   // ── Skill + Gender + Fav Shot — all as pills on one row ──
   {
-    const PILL_ROW_Y=82, PILL_H2=20, PILL_R=10;
-    let px=126;
+    const PILL_ROW_Y=76, PILL_H2=20, PILL_R=10;
+    let px=122;
     ctx.font='bold 10px Arial';
 
     // Skill pill
@@ -4392,7 +4392,7 @@ async function downloadPlayerCard(pid_){
   }
 
   // ── Thin divider below hero ──
-  const heroDivY=118;
+  const heroDivY=106;
   ctx.strokeStyle=m.col+'22';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(16,heroDivY);ctx.lineTo(W-16,heroDivY);ctx.stroke();
 
@@ -4403,7 +4403,7 @@ async function downloadPlayerCard(pid_){
     {label:'BEST STREAK',value:bestStreak_+'W',col:'#FF9944'},
     {label:'W / L',value:p.wins+' / '+p.losses,col:m.col},
   ];
-  const SX=14,SY=128,SW=119,SH=56,SGAP=5;
+  const SX=14,SY=114,SW=119,SH=56,SGAP=5;
   stats.forEach((s,i)=>{
     const x=SX+i*(SW+SGAP);
     ctx.fillStyle='#FFFFFF0A';roundRectPath(ctx,x,SY,SW,SH,8);ctx.fill();
