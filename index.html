@@ -4306,7 +4306,7 @@ async function downloadPlayerCard(pid_){
 
   // ══ HERO SECTION ══
   // Avatar — vertically centred against the text block (name Y≈44, pills Y≈82–102)
-  const AX=64,AY=62,AR=46;
+  const AX=64,AY=54,AR=46;
   ctx.save();ctx.beginPath();ctx.arc(AX,AY,AR,0,Math.PI*2);ctx.clip();
   if(p.avatarB64){
     await new Promise(res=>{
