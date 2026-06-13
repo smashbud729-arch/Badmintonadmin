@@ -4287,27 +4287,56 @@ async function downloadPlayerCard(pid_){
   roundRectPath(ctx,126,52,tw,22,11);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
   ctx.fillStyle=m.col;ctx.textBaseline='middle';ctx.fillText(tierLabel,138,63);
 
-  // Skill · Gender
-  ctx.textAlign='left';ctx.textBaseline='alphabetic';
-  ctx.fillStyle='#555555';ctx.font='10px Arial';
-  ctx.fillText(SKILL_N[p.skill]+' · '+(p.gender==='F'?'Female':'Male'),126,82);
+  // ── Skill + Gender + Fav Shot — all as pills on one row ──
+  {
+    const PILL_ROW_Y=82, PILL_H2=20, PILL_R=10;
+    let px=126;
+    ctx.font='bold 10px Arial';
 
-  // Favourite shot pill — on its own line below skill/gender
-  if(p.favShot){
-    const s_=SHOTS.find(x=>x.key===p.favShot);
-    if(s_){
-      const shotTxt=s_.icon+' '+s_.label;
-      ctx.font='bold 10px Arial';
-      const sw_=ctx.measureText(shotTxt).width+16;
-      ctx.fillStyle=s_.bg;roundRectPath(ctx,126,90,sw_,20,10);ctx.fill();
-      ctx.strokeStyle=s_.border;ctx.lineWidth=1;roundRectPath(ctx,126,90,sw_,20,10);ctx.stroke();
-      ctx.fillStyle=s_.col;ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(shotTxt,126+sw_/2,100);
+    // Skill pill
+    const skillTxt=SKILL_N[p.skill];
+    const SKILL_COLS={1:{col:'#3DA06A',bg:'#001A00',border:'#2E7D52'},
+                      2:{col:'#5B8DD9',bg:'#001020',border:'#3A5FA0'},
+                      3:{col:'#FFD700',bg:'#2A2000',border:'#B8860B'},
+                      4:{col:'#FF9944',bg:'#1A0A00',border:'#CC5500'},
+                      5:{col:'#FF4444',bg:'#1A0000',border:'#CC2222'}};
+    const sc=SKILL_COLS[p.skill]||{col:'#888',bg:'#111',border:'#333'};
+    const sw1=ctx.measureText(skillTxt).width+16;
+    ctx.fillStyle=sc.bg;roundRectPath(ctx,px,PILL_ROW_Y,sw1,PILL_H2,PILL_R);ctx.fill();
+    ctx.strokeStyle=sc.border;ctx.lineWidth=1;roundRectPath(ctx,px,PILL_ROW_Y,sw1,PILL_H2,PILL_R);ctx.stroke();
+    ctx.fillStyle=sc.col;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(skillTxt,px+sw1/2,PILL_ROW_Y+PILL_H2/2);
+    px+=sw1+6;
+
+    // Gender pill
+    const genTxt=p.gender==='F'?'♀ Female':'♂ Male';
+    const genCol=p.gender==='F'?{col:'#FF6688',bg:'#1A0010',border:'#880033'}:{col:'#7AB8E8',bg:'#001520',border:'#1A3A50'};
+    const sw2=ctx.measureText(genTxt).width+16;
+    ctx.fillStyle=genCol.bg;roundRectPath(ctx,px,PILL_ROW_Y,sw2,PILL_H2,PILL_R);ctx.fill();
+    ctx.strokeStyle=genCol.border;ctx.lineWidth=1;roundRectPath(ctx,px,PILL_ROW_Y,sw2,PILL_H2,PILL_R);ctx.stroke();
+    ctx.fillStyle=genCol.col;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(genTxt,px+sw2/2,PILL_ROW_Y+PILL_H2/2);
+    px+=sw2+6;
+
+    // Fav shot pill — same row if it fits
+    if(p.favShot){
+      const s_=SHOTS.find(x=>x.key===p.favShot);
+      if(s_){
+        const shotTxt=s_.icon+' '+s_.label;
+        const sw3=ctx.measureText(shotTxt).width+16;
+        // Wrap to next row if no space
+        const rowX=px+sw3>W-16?126:px;
+        const rowY=px+sw3>W-16?PILL_ROW_Y+PILL_H2+5:PILL_ROW_Y;
+        ctx.fillStyle=s_.bg;roundRectPath(ctx,rowX,rowY,sw3,PILL_H2,PILL_R);ctx.fill();
+        ctx.strokeStyle=s_.border;ctx.lineWidth=1;roundRectPath(ctx,rowX,rowY,sw3,PILL_H2,PILL_R);ctx.stroke();
+        ctx.fillStyle=s_.col;ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(shotTxt,rowX+sw3/2,rowY+PILL_H2/2);
+      }
     }
   }
 
   // ── Thin divider below hero ──
-  const heroDivY=128;
+  const heroDivY=118;
   ctx.strokeStyle=m.col+'22';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(16,heroDivY);ctx.lineTo(W-16,heroDivY);ctx.stroke();
 
@@ -4318,7 +4347,7 @@ async function downloadPlayerCard(pid_){
     {label:'BEST STREAK',value:bestStreak_+'W',col:'#FF9944'},
     {label:'W / L',value:p.wins+' / '+p.losses,col:m.col},
   ];
-  const SX=14,SY=138,SW=119,SH=56,SGAP=5;
+  const SX=14,SY=128,SW=119,SH=56,SGAP=5;
   stats.forEach((s,i)=>{
     const x=SX+i*(SW+SGAP);
     ctx.fillStyle='#FFFFFF0A';roundRectPath(ctx,x,SY,SW,SH,8);ctx.fill();
