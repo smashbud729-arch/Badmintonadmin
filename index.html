@@ -2184,6 +2184,18 @@ function startMatch(ci,sug){
 
 function endMatch(ci,winner){
   const court=S.courts[ci];if(!court.match)return;
+  // Only record stats if a manager session is active
+  if(!S.manager||!S.manager.name){
+    // Still clear the court but don't record stats/log
+    clearInterval(court.timer);
+    const m=court.match;
+    [...m.team1,...m.team2].forEach(p=>{p.onCourt=false;p.inQueue=true;S.queue.push(p.id);});
+    court.status='idle';court.match=null;court.timer=null;court.elapsed=0;
+    overtimeAlerted.delete(ci);
+    render();autoSave();
+    toast('⚠ No manager set — match not recorded. Set a manager to track stats.');
+    return;
+  }
   clearInterval(court.timer);
   const m=court.match,matchIdx=S.log.length;
   const winners=winner===1?m.team1:m.team2,losers=winner===1?m.team2:m.team1;
@@ -2722,7 +2734,7 @@ function renderSeasonBanner(){
       ${champ?`<div class="season-champ" style="margin-top:4px">Current Leader: <b>${champ.name}</b> · ${champ.mmr||1000} MMR</div>`:''}
       ${prevChamp?`<div class="season-champ">Last Season Champion: <b>${prevChamp}</b></div>`:''}
     </div>
-    <div style="font-size:10px;color:#555;text-align:right;flex-shrink:0">Resets<br>${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][s.endsMonth]} 30</div>
+    <div style="font-size:10px;color:#555;text-align:right;flex-shrink:0">Season ends<br>${(()=>{const d=new Date(s.year,s.endsMonth,0);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();})()}</div>
   </div>`;
 }
 
@@ -3080,7 +3092,7 @@ async function dbSaveAvatar(p){
     // Keep avatarB64 locally for offline use but load URL on other devices
     syncStatus('ok','Avatar uploaded ✓');
     toast('☁ Avatar synced to cloud!');
-    console.log('[Avatar] Uploaded to Storage:',url);
+
   }catch(e){
     console.error('[Avatar] Upload exception:',e);
     await _dbSaveAvatarFallback(sb,p);
@@ -4847,7 +4859,8 @@ function getSeasonCountdown(){
   const s=getCurrentSeason();
   const end=new Date(s.year,s.endsMonth,0,23,59,59);
   const days=Math.ceil((end-now)/(1000*60*60*24));
-  return days>0?`${days} day${days!==1?'s':''} left`:'Ends today';
+  const endStr=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][end.getMonth()]+' '+end.getDate();
+  return days>0?`${days} day${days!==1?'s':''} left (ends ${endStr})`:'Ends today';
 }
 
 // ── Achievement definitions ──
