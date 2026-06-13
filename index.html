@@ -2027,8 +2027,9 @@ function balScore(p){
 function fmtTime(s){return Math.floor(s/60)+':'+(s%60).toString().padStart(2,'0')}
 function avHtml(p,sz){
   sz=sz||30;
-  if(p.avatarB64){
-    return `<div class="avatar ${p.gender==='F'?'av-f':'av-m'}" style="width:${sz}px;height:${sz}px;padding:0;overflow:hidden"><img src="${p.avatarB64}" alt="${p.name[0]}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"/></div>`;
+  const src=p.avatarUrl||p.avatarB64||null;
+  if(src){
+    return `<div class="avatar ${p.gender==='F'?'av-f':'av-m'}" style="width:${sz}px;height:${sz}px;padding:0;overflow:hidden"><img src="${src}" alt="${p.name[0]}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block" onerror="this.parentElement.innerHTML='${p.name[0].toUpperCase()}'"/></div>`;
   }
   return `<div class="avatar ${p.gender==='F'?'av-f':'av-m'}" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*0.38)}px">${p.name[0].toUpperCase()}</div>`;
 }
@@ -3033,29 +3034,62 @@ async function dbSaveAvatar(p){
     }catch(e){toast('⚠ DB lookup failed');return;}
   }
 
-  // Size guard — base64 JPEG ~512px should be ~80–120 KB; warn if suspiciously large
-  const kb=Math.round((p.avatarB64||'').length*0.75/1024);
-  console.log('[Avatar] Saving '+kb+'KB for '+p.name+' (dbId:'+p.dbId+')');
-  if(kb>400){toast('⚠ Photo too large ('+kb+'KB). Try a smaller image.');return;}
+  syncStatus('busy','Uploading avatar…');
 
-  syncStatus('busy','Saving avatar…');
-  const res=await sb.from('players').update({avatar:p.avatarB64||null}).eq('id',p.dbId).select('id,avatar');
-  if(res.error){
-    console.error('[Avatar] Save error:',res.error);
-    syncStatus('err','Avatar save failed');
-    toast('⚠ Avatar not saved: '+res.error.message);
-    return;
+  // ── Upload to Supabase Storage (avatars bucket) ──
+  // Convert base64 to Blob
+  try{
+    const b64=p.avatarB64||'';
+    const byteStr=atob(b64.split(',')[1]||b64);
+    const arr=new Uint8Array(byteStr.length);
+    for(let i=0;i<byteStr.length;i++)arr[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([arr],{type:'image/jpeg'});
+
+    // File path: avatars/{dbId}.jpg — overwrites on re-upload
+    const filePath='avatars/'+p.dbId+'.jpg';
+    const upRes=await sb.storage.from('avatars').upload(filePath,blob,{
+      contentType:'image/jpeg',
+      upsert:true  // overwrite existing
+    });
+
+    if(upRes.error){
+      console.error('[Avatar] Storage upload error:',upRes.error);
+      // Fallback: try saving base64 directly to players table
+      await _dbSaveAvatarFallback(sb,p);
+      return;
+    }
+
+    // Get public URL
+    const {data:urlData}=sb.storage.from('avatars').getPublicUrl(filePath);
+    const publicUrl=urlData?.publicUrl;
+    if(!publicUrl){toast('⚠ Could not get avatar URL');return;}
+
+    // Add cache-bust so browsers don't serve stale image after re-upload
+    const url=publicUrl+'?t='+Date.now();
+
+    // Save URL to players table
+    const rowRes=await sb.from('players').update({avatar:url}).eq('id',p.dbId);
+    if(rowRes.error){console.error('[Avatar] URL save error:',rowRes.error);}
+
+    // Update local state to use URL instead of base64
+    p.avatarUrl=url;
+    // Keep avatarB64 locally for offline use but load URL on other devices
+    syncStatus('ok','Avatar uploaded ✓');
+    toast('☁ Avatar synced to cloud!');
+    console.log('[Avatar] Uploaded to Storage:',url);
+  }catch(e){
+    console.error('[Avatar] Upload exception:',e);
+    await _dbSaveAvatarFallback(sb,p);
   }
-  // Verify the data actually came back with avatar set
-  const saved=res.data&&res.data[0]&&res.data[0].avatar;
-  if(!saved){
-    console.warn('[Avatar] Update succeeded but avatar field is empty in response — possible column type issue');
-    toast('⚠ Avatar may not have saved — check Supabase column type is TEXT');
-    return;
-  }
-  syncStatus('ok','Avatar saved ✓');
-  toast('☁ Avatar synced to cloud!');
-  console.log('[Avatar] Confirmed saved for '+p.name);
+}
+
+// Fallback: store base64 directly (works if image is small enough)
+async function _dbSaveAvatarFallback(sb,p){
+  const kb=Math.round((p.avatarB64||'').length*0.75/1024);
+  if(kb>200){toast('⚠ Avatar too large for direct save ('+kb+'KB). Create an "avatars" bucket in Supabase Storage.');syncStatus('err','Avatar save failed');return;}
+  const res=await sb.from('players').update({avatar:p.avatarB64||null}).eq('id',p.dbId);
+  if(res.error){syncStatus('err','Avatar save failed');toast('⚠ Avatar not saved: '+res.error.message);}
+  else{syncStatus('ok','Avatar saved ✓');toast('☁ Avatar saved (base64 fallback)');}
 }
 
 async function dbDeletePlayer(p){
@@ -3121,8 +3155,11 @@ async function loadFromDB(){
       players.forEach(row=>{
         let local=S.players.find(p=>p.dbId===row.id);
         if(!local)local=S.players.find(p=>p.name.toLowerCase()===row.name.toLowerCase());
-        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar)local.avatarB64=row.avatar;const dbBest=row.best_streak||0;const dbSeasonBest=row.season_best_streak!=null?row.season_best_streak:dbBest;local.bestStreak=Math.max(local.bestStreak||0,dbBest);local.seasonBestStreak=Math.max(local.seasonBestStreak||0,dbSeasonBest);if(row.fav_shot&&!local.favShot)local.favShot=row.fav_shot;merged++;}
-        else{const _dbBest=row.best_streak||0;const _dbSznBest=row.season_best_streak!=null?row.season_best_streak:_dbBest;S.players.push({id:S.nextId++,dbId:row.id,name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,mmr:row.mmr||1000,avatarB64:row.avatar||null,bestStreak:_dbBest,seasonBestStreak:_dbSznBest,favShot:row.fav_shot||null,inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0});added++;}
+        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar){
+          if(row.avatar.startsWith('http'))local.avatarUrl=row.avatar;
+          else local.avatarB64=row.avatar;
+        }const dbBest=row.best_streak||0;const dbSeasonBest=row.season_best_streak!=null?row.season_best_streak:dbBest;local.bestStreak=Math.max(local.bestStreak||0,dbBest);local.seasonBestStreak=Math.max(local.seasonBestStreak||0,dbSeasonBest);if(row.fav_shot&&!local.favShot)local.favShot=row.fav_shot;merged++;}
+        else{const _dbBest=row.best_streak||0;const _dbSznBest=row.season_best_streak!=null?row.season_best_streak:_dbBest;S.players.push({id:S.nextId++,dbId:row.id,name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,mmr:row.mmr||1000,avatarUrl:row.avatar&&row.avatar.startsWith('http')?row.avatar:null,avatarB64:row.avatar&&!row.avatar.startsWith('http')?row.avatar:null,bestStreak:_dbBest,seasonBestStreak:_dbSznBest,favShot:row.fav_shot||null,inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0});added++;}
       });
       // After load, re-apply any session streaks from S.log (in case session is active)
       S.players.forEach(p=>{
@@ -3190,7 +3227,10 @@ async function relinkAllPlayersFromDB(){
       p.losses=Math.max(p.losses||0,row.losses||0);
       p.matches=Math.max(p.matches||0,row.matches||0);
       p.mmr=row.mmr||p.mmr||1000;
-      if(row.avatar&&!p.avatarB64)p.avatarB64=row.avatar;
+      if(row.avatar){
+        if(row.avatar.startsWith('http'))p.avatarUrl=row.avatar;
+        else if(!p.avatarB64)p.avatarB64=row.avatar;
+      }
       const rlDbBest=row.best_streak||0;
       const rlDbSznBest=row.season_best_streak!=null?row.season_best_streak:rlDbBest;
       p.bestStreak=Math.max(p.bestStreak||0,rlDbBest);
@@ -3886,7 +3926,7 @@ function renderPlayerProfile(p){
   <div class="pp-hero" style="background:linear-gradient(135deg,${m.bg},#000000);border:1px solid ${m.border};${glowAnim?'box-shadow:0 0 18px '+m.glow:''}">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
       <div class="pp-avatar-ring" style="border-color:${m.col};background:${m.bg};${glowAnim?'animation:pp-tier-pulse 2s ease-in-out infinite':''}" onclick="triggerAvatarUpload(${p.id})" title="Click to upload photo">
-        ${p.avatarB64?`<img src="${p.avatarB64}" alt="${p.name}"/>`:`<span style="font-size:28px">${p.gender==='F'?'👩':'👨'}</span>`}
+        ${(p.avatarUrl||p.avatarB64)?`<img src="${p.avatarUrl||p.avatarB64}" alt="${p.name}" onerror="this.style.display='none'"/>`:`<span style="font-size:28px">${p.gender==='F'?'👩':'👨'}</span>`}
         <div class="pp-avatar-edit">📷 EDIT</div>
       </div>
       <input type="file" id="pp-avatar-input-${p.id}" accept="image/*" style="display:none" onchange="handleAvatarUpload(${p.id},this)"/>
@@ -4353,9 +4393,11 @@ async function downloadPlayerCard(pid_){
   // Avatar — vertically centred against the text block (name Y≈44, pills Y≈82–102)
   const AX=64,AY=54,AR=46;
   ctx.save();ctx.beginPath();ctx.arc(AX,AY,AR,0,Math.PI*2);ctx.clip();
-  if(p.avatarB64){
+  const _avatarSrc=p.avatarUrl||p.avatarB64||null;
+  if(_avatarSrc){
     await new Promise(res=>{
       const ai=new Image();
+      ai.crossOrigin='anonymous';
       ai.onload=()=>{
         // Cover-fit: scale to fill the circle, centred
         const scale=Math.max((AR*2)/ai.naturalWidth,(AR*2)/ai.naturalHeight);
@@ -4365,7 +4407,7 @@ async function downloadPlayerCard(pid_){
         ctx.drawImage(ai,sx,sy,sw,sh);
         res();
       };
-      ai.onerror=res;ai.src=p.avatarB64;
+      ai.onerror=res;ai.src=_avatarSrc;
     });
   } else {
     const ag=ctx.createRadialGradient(AX,AY,0,AX,AY,AR);
