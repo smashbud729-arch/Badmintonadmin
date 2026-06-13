@@ -2026,7 +2026,11 @@ function balScore(p){
 
 function fmtTime(s){return Math.floor(s/60)+':'+(s%60).toString().padStart(2,'0')}
 function avHtml(p,sz){
-  sz=sz||30;return `<div class="avatar ${p.gender==='F'?'av-f':'av-m'}" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*0.38)}px">${p.name[0].toUpperCase()}</div>`;
+  sz=sz||30;
+  if(p.avatarB64){
+    return `<div class="avatar ${p.gender==='F'?'av-f':'av-m'}" style="width:${sz}px;height:${sz}px;padding:0;overflow:hidden"><img src="${p.avatarB64}" alt="${p.name[0]}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"/></div>`;
+  }
+  return `<div class="avatar ${p.gender==='F'?'av-f':'av-m'}" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*0.38)}px">${p.name[0].toUpperCase()}</div>`;
 }
 function pChip(p,flip){
   const g=`<div class="pg ${p.gender==='F'?'pg-f':'pg-m'}">${p.gender}</div>`;
