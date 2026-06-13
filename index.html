@@ -1212,6 +1212,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
         <button class="btn btn-xs btn-o" onclick="queueAll()" title="Add all players to queue">+ All</button>
         <button class="btn btn-xs btn-red" onclick="dequeueAll()" title="Remove all from queue">− All</button>
       </div>
+      <input class="queue-search" id="player-list-search" type="search" placeholder="🔍 Search players…" oninput="renderAllPlayers()" style="margin-bottom:8px;width:100%;box-sizing:border-box"/>
       <div class="slist" id="all-players"></div>
     </div>
     <div>
@@ -2075,8 +2076,10 @@ function saveSkill(pid_,val){
 }
 function renderAllPlayers(){
   const ap=document.getElementById('all-players');if(!ap)return;
-  document.getElementById('pl-total').textContent=S.players.length;
-  const sorted=[...S.players].sort((a,b)=>a.name.localeCompare(b.name));
+  const searchVal=(document.getElementById('player-list-search')?.value||'').toLowerCase().trim();
+  const filtered=searchVal?S.players.filter(p=>p.name.toLowerCase().includes(searchVal)):S.players;
+  document.getElementById('pl-total').textContent=searchVal?`${filtered.length}/${S.players.length}`:S.players.length;
+  const sorted=[...filtered].sort((a,b)=>a.name.localeCompare(b.name));
   ap.innerHTML=sorted.length?sorted.map(p=>`
     <div>
       <div class="pl-item ${(()=>{const t=mmrTier(p.mmr||1000);const map={'mmr-platinum':'tier-pacer','mmr-diamond':'tier-tactician','mmr-epic':'tier-deceiver','mmr-legend':'tier-strategist','mmr-mythic':'tier-grandmaster'};return map[t.cls]||'';})()}" style="flex-direction:column;align-items:stretch;gap:6px">
