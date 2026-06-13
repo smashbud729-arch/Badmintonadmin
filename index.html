@@ -4146,12 +4146,19 @@ function clampCrop(){
 
 function confirmCrop(){
   if(!_crop.img||_crop.pid==null)return;
-  // Export at 2× for quality
+  // Export the visible crop region at 512×512 (2× quality)
+  // ox/oy are the image top-left position on the 240px canvas in display coords.
+  // Convert back to source image pixel coords:
+  //   source_x = -ox / zoom,  source_y = -oy / zoom
+  //   source_w = SIZE / zoom,  source_h = SIZE / zoom
   const OUT=512;
-  const scale=OUT/_crop.SIZE;
   const out=document.createElement('canvas');out.width=OUT;out.height=OUT;
   const ctx=out.getContext('2d');
-  ctx.drawImage(_crop.img,_crop.ox*scale,_crop.oy*scale,_crop.img.width*_crop.zoom*scale,_crop.img.height*_crop.zoom*scale);
+  const srcX = -_crop.ox / _crop.zoom;
+  const srcY = -_crop.oy / _crop.zoom;
+  const srcW = _crop.SIZE / _crop.zoom;
+  const srcH = _crop.SIZE / _crop.zoom;
+  ctx.drawImage(_crop.img, srcX, srcY, srcW, srcH, 0, 0, OUT, OUT);
   const p=S.players.find(x=>x.id===_crop.pid);
   if(!p){closeCropModal();return;}
   const b64=out.toDataURL('image/jpeg',0.82); // 0.82 = good quality/size balance at 512px
