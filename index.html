@@ -4425,26 +4425,34 @@ async function downloadPlayerCard(pid_){
   let pillX=16,pillY=PILL_START_Y;
   ctx.font='bold 10px Arial';
 
-  // Draw unlocked first, then locked
+  // Draw unlocked first (full colour), then locked (padlock only, dark pill)
   const achOrder=[...unlockedAchs,...achs.filter(a=>!a.unlocked)];
   achOrder.forEach(a=>{
-    const pillTxt=a.icon+' '+a.label;
-    const pillW=ctx.measureText(pillTxt).width+16;
+    let pillTxt, pillW;
+    if(a.unlocked){
+      pillTxt=a.icon+' '+a.label;
+      pillW=ctx.measureText(pillTxt).width+16;
+    } else {
+      // Locked: show padlock + label, greyed out
+      pillTxt='🔒 '+a.label;
+      pillW=ctx.measureText(pillTxt).width+14;
+    }
     // Wrap to next row if needed
     if(pillX+pillW>W-16){pillX=16;pillY+=PILL_H+PILL_GAP_Y;}
     if(a.unlocked){
       ctx.fillStyle=a.bg;roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.fill();
       ctx.strokeStyle=a.border;ctx.lineWidth=1;
       roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.stroke();
-      ctx.fillStyle=a.col;
+      ctx.fillStyle=a.col;ctx.globalAlpha=1;
     } else {
       ctx.fillStyle='#111111';roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.fill();
-      ctx.strokeStyle='#2A2A2A';ctx.lineWidth=1;
+      ctx.strokeStyle='#252525';ctx.lineWidth=1;
       roundRectPath(ctx,pillX,pillY,pillW,PILL_H,PILL_H/2);ctx.stroke();
-      ctx.fillStyle='#333333';
+      ctx.fillStyle='#3A3A3A';ctx.globalAlpha=0.7;
     }
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(pillTxt,pillX+pillW/2,pillY+PILL_H/2);
+    ctx.globalAlpha=1;
     pillX+=pillW+PILL_GAP_X;
   });
 
