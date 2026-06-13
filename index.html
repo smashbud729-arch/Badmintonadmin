@@ -4308,7 +4308,8 @@ async function downloadPlayerCard(pid_){
         // Cover-fit: scale to fill the circle, centred
         const scale=Math.max((AR*2)/ai.naturalWidth,(AR*2)/ai.naturalHeight);
         const sw=ai.naturalWidth*scale, sh=ai.naturalHeight*scale;
-        const sx=AX-AR-(sw-(AR*2))/2, sy=AY-AR-(sh-(AR*2))/2;
+        // Centre the scaled image on the circle's centre point
+        const sx=AX-sw/2, sy=AY-sh/2;
         ctx.drawImage(ai,sx,sy,sw,sh);
         res();
       };
