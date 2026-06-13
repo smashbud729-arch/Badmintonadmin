@@ -1929,17 +1929,21 @@ function renderAdvPanel(n){
         const streakTag = streak>=3?`<span style="font-size:9px">🔥${streak}</span>`:'';
         const sessionG  = (()=>{let c=0;S.log.forEach(e=>{const ns=[...e.t1.split(' & '),...e.t2.split(' & ')];if(ns.includes(p.name))c++;});return c;})();
         const gcTag     = sessionG>0?`<span class="gc-badge" style="font-size:8px;padding:1px 3px">🎮${sessionG}G</span>`:'';
-        const genderDot = `<span class="pg ${p.gender==='F'?'pg-f':'pg-m'}" style="width:11px;height:11px;font-size:6px;flex-shrink:0">${p.gender}</span>`;
+        const avatarEl = avHtml(p, 32);
         const inBadge   = inA?`<span style="font-size:7px;font-weight:800;color:var(--male)">TEAM A</span>`:inB?`<span style="font-size:7px;font-weight:800;color:var(--pkl)">TEAM B</span>`:'';
         return `<div class="adv-p-chip${courtClass}${selClass}" onclick="advTogglePlayer(${n},${p.id})" title="${p.name} · ${SKILL_N[p.skill]} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR${elsewhere?' · 🔒 In another panel':''}">
-          <div style="display:flex;align-items:center;gap:3px;width:100%">
-            ${genderDot}
-            <span style="flex:1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
-            ${inBadge}
-          </div>
-          <div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap">
-            <span style="font-size:9px;color:var(--gr4)">${wr(p)}%WR</span>
-            ${gcTag}${streakTag}${courtTag}${elseTag}
+          <div style="display:flex;align-items:center;gap:6px;width:100%">
+            <div style="flex-shrink:0">${avatarEl}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:3px">
+                <span style="flex:1;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+                ${inBadge}
+              </div>
+              <div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-top:2px">
+                <span style="font-size:9px;color:var(--gr4)">${wr(p)}%WR</span>
+                ${gcTag}${streakTag}${courtTag}${elseTag}
+              </div>
+            </div>
           </div>
         </div>`;
       }).join('') || `<span style="font-size:10px;color:var(--gr2);padding:4px 0;text-align:center;display:block">—</span>`;
