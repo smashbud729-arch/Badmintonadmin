@@ -3115,8 +3115,16 @@ async function loadFromDB(){
       players.forEach(row=>{
         let local=S.players.find(p=>p.dbId===row.id);
         if(!local)local=S.players.find(p=>p.name.toLowerCase()===row.name.toLowerCase());
-        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar)local.avatarB64=row.avatar;local.bestStreak=Math.max(local.bestStreak||0,row.best_streak||0);local.seasonBestStreak=Math.max(local.seasonBestStreak||0,row.season_best_streak||0);merged++;}
-        else{S.players.push({id:S.nextId++,dbId:row.id,name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,mmr:row.mmr||1000,avatarB64:row.avatar||null,bestStreak:row.best_streak||0,seasonBestStreak:row.season_best_streak||0,inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0});added++;}
+        if(local){local.dbId=row.id;local.wins=Math.max(local.wins||0,row.wins||0);local.losses=Math.max(local.losses||0,row.losses||0);local.matches=Math.max(local.matches||0,row.matches||0);local.mmr=row.mmr||local.mmr||1000;if(row.avatar)local.avatarB64=row.avatar;const dbBest=row.best_streak||0;const dbSeasonBest=row.season_best_streak!=null?row.season_best_streak:dbBest;local.bestStreak=Math.max(local.bestStreak||0,dbBest);local.seasonBestStreak=Math.max(local.seasonBestStreak||0,dbSeasonBest);merged++;}
+        else{const _dbBest=row.best_streak||0;const _dbSznBest=row.season_best_streak!=null?row.season_best_streak:_dbBest;S.players.push({id:S.nextId++,dbId:row.id,name:row.name,gender:row.gender,skill:row.skill||3,mode:row.mode||'any',wins:row.wins||0,losses:row.losses||0,matches:row.matches||0,mmr:row.mmr||1000,avatarB64:row.avatar||null,bestStreak:_dbBest,seasonBestStreak:_dbSznBest,inQueue:false,onCourt:false,lastMatchAt:-99,queueCount:0});added++;}
+      });
+      // After load, re-apply any session streaks from S.log (in case session is active)
+      S.players.forEach(p=>{
+        const liveStreak=getWinStreak(p);
+        if(liveStreak>0){
+          p.seasonBestStreak=Math.max(p.seasonBestStreak||0,liveStreak);
+          p.bestStreak=Math.max(p.bestStreak||0,liveStreak);
+        }
       });
       syncStatus('ok',`Loaded ${players.length} player${players.length>1?'s':''} from DB`);
       render();renderPayment();autoSave();
@@ -3177,6 +3185,12 @@ async function relinkAllPlayersFromDB(){
       p.matches=Math.max(p.matches||0,row.matches||0);
       p.mmr=row.mmr||p.mmr||1000;
       if(row.avatar&&!p.avatarB64)p.avatarB64=row.avatar;
+      const rlDbBest=row.best_streak||0;
+      const rlDbSznBest=row.season_best_streak!=null?row.season_best_streak:rlDbBest;
+      p.bestStreak=Math.max(p.bestStreak||0,rlDbBest);
+      p.seasonBestStreak=Math.max(p.seasonBestStreak||0,rlDbSznBest);
+      const rlLive=getWinStreak(p);
+      if(rlLive>0){p.seasonBestStreak=Math.max(p.seasonBestStreak,rlLive);p.bestStreak=Math.max(p.bestStreak,rlLive);}
       updated++;
     }catch(e){console.warn('relink failed for',p.name,e);}
   }
@@ -3902,7 +3916,7 @@ function renderPlayerProfile(p){
   <div class="pp-stats-row">
     <div class="pp-stat"><div class="pp-stat-v" style="color:var(--w)">${matches}</div><div class="pp-stat-l">Career Games</div></div>
     <div class="pp-stat"><div class="pp-stat-v" style="color:${winRate>=50?'#3DA06A':'#E8537A'}">${winRate}%</div><div class="pp-stat-l">Win Rate</div></div>
-    <div class="pp-stat"><div class="pp-stat-v" style="color:#FF9944">${p.seasonBestStreak||Math.max(streak,p.bestStreak||0)}</div><div class="pp-stat-l">Season Streak</div></div>
+    <div class="pp-stat"><div class="pp-stat-v" style="color:#FF9944">${Math.max(p.seasonBestStreak||0,streak)}</div><div class="pp-stat-l">Season Streak</div></div>
     <div class="pp-stat"><div class="pp-stat-v" style="color:${m.col}">${sessionGames}</div><div class="pp-stat-l">Today's Games</div></div>
   </div>
 
@@ -4196,7 +4210,7 @@ async function downloadPlayerCard(pid_){
   const wr_=p.matches?Math.round(p.wins/p.matches*100):0;
   const streak=getWinStreak(p);
   const hasGlow=!!m.glow;
-  const bestStreak_=p.seasonBestStreak||Math.max(streak,p.bestStreak||0);
+  const bestStreak_=Math.max(p.seasonBestStreak||0,streak,p.bestStreak||0);
 
   // ── Compute highlights (mirror renderPlayerProfile logic) ──
   let sessionW=0,sessionL=0,sessionGames=0;
