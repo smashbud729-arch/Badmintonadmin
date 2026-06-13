@@ -4273,32 +4273,29 @@ async function downloadPlayerCard(pid_){
     `💪 ${p.name.split(' ')[0]} is a ${m.label}. Keep climbing.`,
   ].filter(Boolean)[0];
 
-  // ── HQ Canvas — 3× retina ──
-  const W=520,H=560,DPR=3;
+  // ── HQ Canvas — 3× retina, height computed dynamically ──
+  const W=520,DPR=3;
+  // Use a tall scratch canvas; we'll crop to actual content at the end
+  const SCRATCH_H=700;
   const cv=document.createElement('canvas');
-  cv.width=W*DPR;cv.height=H*DPR;
-  cv.style.width=W+'px';cv.style.height=H+'px';
+  cv.width=W*DPR;cv.height=SCRATCH_H*DPR;
+  cv.style.width=W+'px';cv.style.height=SCRATCH_H+'px';
   const ctx=cv.getContext('2d');
   ctx.scale(DPR,DPR);
 
-  // ── Background ──
-  const grad=ctx.createLinearGradient(0,0,W,H);
+  // ── Background (drawn over full scratch height, cropped later) ──
+  const grad=ctx.createLinearGradient(0,0,W,SCRATCH_H);
   grad.addColorStop(0,m.bg);grad.addColorStop(0.6,'#0A0A0A');grad.addColorStop(1,'#000000');
-  ctx.fillStyle=grad;roundRectPath(ctx,0,0,W,H,16);ctx.fill();
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,SCRATCH_H);
 
   // Radial highlight top-right
   const radGrad=ctx.createRadialGradient(W*0.75,0,0,W*0.75,0,W*0.6);
   radGrad.addColorStop(0,(m.col+'18'));radGrad.addColorStop(1,'transparent');
-  ctx.fillStyle=radGrad;roundRectPath(ctx,0,0,W,H,16);ctx.fill();
+  ctx.fillStyle=radGrad;ctx.fillRect(0,0,W,SCRATCH_H);
 
-  // ── Border ──
-  ctx.strokeStyle=m.border;ctx.lineWidth=2;
-  if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=20;}
-  roundRectPath(ctx,1,1,W-2,H-2,15);ctx.stroke();ctx.shadowBlur=0;
-
-  // ── Left accent bar ──
+  // Left accent bar (full height, cropped later)
   if(hasGlow){ctx.shadowColor=m.glow;ctx.shadowBlur=16;}
-  ctx.fillStyle=m.col;roundRectPath(ctx,0,0,5,H,3);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle=m.col;ctx.fillRect(0,0,5,SCRATCH_H);ctx.shadowBlur=0;
 
   // ══ HERO SECTION (Y: 0–140) ══
   // Avatar — centred vertically in hero
@@ -4307,7 +4304,14 @@ async function downloadPlayerCard(pid_){
   if(p.avatarB64){
     await new Promise(res=>{
       const ai=new Image();
-      ai.onload=()=>{ctx.drawImage(ai,AX-AR,AY-AR,AR*2,AR*2);res();};
+      ai.onload=()=>{
+        // Cover-fit: scale to fill the circle, centred
+        const scale=Math.max((AR*2)/ai.naturalWidth,(AR*2)/ai.naturalHeight);
+        const sw=ai.naturalWidth*scale, sh=ai.naturalHeight*scale;
+        const sx=AX-AR-(sw-(AR*2))/2, sy=AY-AR-(sh-(AR*2))/2;
+        ctx.drawImage(ai,sx,sy,sw,sh);
+        res();
+      };
       ai.onerror=res;ai.src=p.avatarB64;
     });
   } else {
@@ -4508,24 +4512,20 @@ async function downloadPlayerCard(pid_){
   });
 
   // ══ BOTTOM STRIP ══
-  const achEndY=pillY+PILL_H+14;
-  const stripY=achEndY;
-  // Clip bottom strip to card boundary using a thin separator instead
-  ctx.strokeStyle=m.col+'22';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(16,stripY-2);ctx.lineTo(W-16,stripY-2);ctx.stroke();
-  ctx.fillStyle='#FFFFFF05';
-  ctx.fillRect(0,stripY,W,42);
+  const stripY=pillY+PILL_H+12;
+
+  // Thin separator
+  ctx.strokeStyle=m.col+'33';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(16,stripY-1);ctx.lineTo(W-16,stripY-1);ctx.stroke();
+  ctx.fillStyle='#FFFFFF05';ctx.fillRect(0,stripY,W,42);
 
   // QR code in bottom-right
   const qrData='Whack // '+p.name+' | '+t.icon+' '+m.label+' ('+(p.mmr||1000)+' MMR) | '+p.wins+'W '+p.losses+'L '+wr_+'%WR'+(streak>0?' | Streak:'+streak+'W':'');
   const qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent(qrData)+'&bgcolor=000000&color=FFFFFF&margin=4';
   await new Promise(res=>{
     const qi=new Image();qi.crossOrigin='anonymous';
-    qi.onload=()=>{
-      ctx.drawImage(qi,W-48,stripY+2,38,38);res();
-    };
-    qi.onerror=res;qi.src=qrSrc;
-    setTimeout(res,5000);
+    qi.onload=()=>{ctx.drawImage(qi,W-48,stripY+2,38,38);res();};
+    qi.onerror=res;qi.src=qrSrc;setTimeout(res,5000);
   });
 
   // Session today pill
@@ -4545,8 +4545,24 @@ async function downloadPlayerCard(pid_){
   ctx.textAlign='left';ctx.textBaseline='middle';
   ctx.fillText('🏸 WHACK BADMINTON',16,stripY+21);
 
-  // ── Return the canvas blob for sharing or downloading ──
-  return cv;
+  // ── Crop canvas to exact content height + redraw border & accent bar ──
+  const finalH=stripY+42;
+  const cropped=document.createElement('canvas');
+  cropped.width=W*DPR;cropped.height=finalH*DPR;
+  const cctx=cropped.getContext('2d');
+  cctx.drawImage(cv,0,0,W*DPR,finalH*DPR,0,0,W*DPR,finalH*DPR);
+  cctx.scale(DPR,DPR);
+  // Redraw rounded border on cropped canvas
+  cctx.strokeStyle=m.border;cctx.lineWidth=2;
+  if(hasGlow){cctx.shadowColor=m.glow;cctx.shadowBlur=20;}
+  roundRectPath(cctx,1,1,W-2,finalH-2,15);cctx.stroke();cctx.shadowBlur=0;
+  // Redraw left accent bar (was full SCRATCH_H, now correct height)
+  cctx.fillStyle=m.col;
+  if(hasGlow){cctx.shadowColor=m.glow;cctx.shadowBlur=16;}
+  roundRectPath(cctx,0,0,5,finalH,3);cctx.fill();cctx.shadowBlur=0;
+
+  // ── Return cropped canvas ──
+  return cropped;
 }
 
 // ── Share card state ──
