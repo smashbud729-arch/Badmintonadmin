@@ -4022,7 +4022,10 @@ function renderPlayerProfile(p){
 }
 
 // ── Avatar crop system ──
-const _crop={pid:null,img:null,zoom:1,ox:0,oy:0,dragging:false,lastX:0,lastY:0,lastDist:0,SIZE:240};
+// ── Avatar Crop System ──
+// All coords in _crop are in IMAGE PIXEL SPACE (not canvas display space).
+// ox,oy = top-left corner of the VISIBLE 240px region in image pixels (starts at 0,0)
+const _crop={pid:null,img:null,zoom:1,ox:0,oy:0,dragging:false,lastX:0,lastY:0,lastDist:0,SIZE:240,_touchHandlers:null};
 
 function triggerAvatarUpload(pid_){
   const inp=document.getElementById('pp-avatar-input-'+pid_);
@@ -4035,15 +4038,19 @@ function handleAvatarUpload(pid_,input){
   reader.onload=e=>{
     const img=new Image();
     img.onload=()=>{
+      const nw=img.naturalWidth, nh=img.naturalHeight;
       _crop.pid=pid_;_crop.img=img;
-      // Fit image to fill the 240px circle by default
-      _crop.zoom=Math.max(_crop.SIZE/img.width,_crop.SIZE/img.height);
-      // Centre
-      _crop.ox=(_crop.SIZE-img.width*_crop.zoom)/2;
-      _crop.oy=(_crop.SIZE-img.height*_crop.zoom)/2;
-      // Sync slider
+      // zoom = how many image pixels fit into 1 canvas pixel
+      // Start: image fills the circle (cover fit)
+      _crop.zoom=Math.min(nw,nh)/_crop.SIZE;
+      if(_crop.zoom<1)_crop.zoom=1; // never zoom out below 1:1
+      // Centre the crop box on the image
+      _crop.ox=(nw/_crop.zoom - _crop.SIZE)/2;
+      _crop.oy=(nh/_crop.zoom - _crop.SIZE)/2;
+      // Sync slider (zoom range: 0.5× to 4× of default)
       const sl=document.getElementById('crop-zoom-slider');
-      if(sl){sl.min=_crop.zoom*0.5;sl.max=_crop.zoom*4;sl.step=_crop.zoom*0.01;sl.value=_crop.zoom;}
+      const defaultZoom=_crop.zoom;
+      if(sl){sl.min=defaultZoom*0.5;sl.max=defaultZoom*4;sl.step=0.01;sl.value=_crop.zoom;}
       openCropModal();
       requestAnimationFrame(drawCrop);
     };
@@ -4052,123 +4059,154 @@ function handleAvatarUpload(pid_,input){
   reader.readAsDataURL(file);
 }
 
-function openCropModal(){
-  const m=document.getElementById('avatar-crop-modal');
-  if(m)m.classList.add('show');
-  const wrap=document.getElementById('avatar-crop-canvas-wrap');
-  const cv=document.getElementById('avatar-crop-canvas');
-  if(!cv||!wrap)return;
-  cv.width=_crop.SIZE;cv.height=_crop.SIZE;
-  // ── Mouse events ──
-  wrap.onmousedown=e=>{_crop.dragging=true;_crop.lastX=e.clientX;_crop.lastY=e.clientY;e.preventDefault();};
-  window.onmousemove=e=>{
-    if(!_crop.dragging)return;
-    _crop.ox+=e.clientX-_crop.lastX;_crop.oy+=e.clientY-_crop.lastY;
-    _crop.lastX=e.clientX;_crop.lastY=e.clientY;
-    clampCrop();drawCrop();
-  };
-  window.onmouseup=()=>{_crop.dragging=false;};
-  // ── Touch events ──
-  wrap.ontouchstart=e=>{
-    if(e.touches.length===1){
-      _crop.dragging=true;_crop.lastX=e.touches[0].clientX;_crop.lastY=e.touches[0].clientY;
-    } else if(e.touches.length===2){
-      _crop.dragging=false;
-      _crop.lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    }
-    e.preventDefault();
-  },{passive:false};
-  wrap.ontouchmove=e=>{
-    if(e.touches.length===1&&_crop.dragging){
-      _crop.ox+=e.touches[0].clientX-_crop.lastX;_crop.oy+=e.touches[0].clientY-_crop.lastY;
-      _crop.lastX=e.touches[0].clientX;_crop.lastY=e.touches[0].clientY;
-      clampCrop();drawCrop();
-    } else if(e.touches.length===2){
-      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-      const delta=d-_crop.lastDist;_crop.lastDist=d;
-      applyCropZoom(_crop.zoom+(delta*0.008),_crop.SIZE/2,_crop.SIZE/2);
-    }
-    e.preventDefault();
-  },{passive:false};
-  // ── Scroll to zoom ──
-  wrap.onwheel=e=>{
-    applyCropZoom(_crop.zoom-(e.deltaY*0.001),_crop.SIZE/2,_crop.SIZE/2);
-    e.preventDefault();
-  },{passive:false};
-}
-
-function closeCropModal(){
-  const m=document.getElementById('avatar-crop-modal');
-  if(m)m.classList.remove('show');
-  window.onmousemove=null;window.onmouseup=null;
-  _crop.pid=null;_crop.img=null;
-}
+// ── Coordinate model ──
+// _crop.ox, _crop.oy = offset into the image (in image pixels) of the top-left of the visible area
+// _crop.zoom = image pixels per canvas pixel (zoom IN = larger zoom number = fewer image pixels shown)
+// drawImage source rect: (ox, oy, SIZE*zoom, SIZE*zoom) — i.e. take SIZE*zoom image pixels
+// drawImage dest rect:   (0,  0,  SIZE,      SIZE)      — display in the 240px canvas
+//
+// To pan: when user drags +dx canvas px, the visible area moves +dx canvas px
+//         = +dx*zoom image pixels in ox/oy direction
+//
+// confirmCrop: export exactly (ox, oy, SIZE*zoom, SIZE*zoom) from original image
 
 function drawCrop(){
   const cv=document.getElementById('avatar-crop-canvas');if(!cv||!_crop.img)return;
   const ctx=cv.getContext('2d');
   ctx.clearRect(0,0,_crop.SIZE,_crop.SIZE);
-  ctx.drawImage(_crop.img,_crop.ox,_crop.oy,_crop.img.width*_crop.zoom,_crop.img.height*_crop.zoom);
+  // Draw: take SIZE*zoom image pixels starting at (ox,oy), render into SIZE×SIZE canvas
+  ctx.drawImage(_crop.img,
+    _crop.ox, _crop.oy, _crop.SIZE*_crop.zoom, _crop.SIZE*_crop.zoom,
+    0, 0, _crop.SIZE, _crop.SIZE);
 }
 
-function cropZoom(delta){
-  applyCropZoom(_crop.zoom+delta,_crop.SIZE/2,_crop.SIZE/2);
-  const sl=document.getElementById('crop-zoom-slider');
-  if(sl)sl.value=_crop.zoom;
+function clampCrop(){
+  if(!_crop.img)return;
+  const nw=_crop.img.naturalWidth, nh=_crop.img.naturalHeight;
+  const visW=_crop.SIZE*_crop.zoom, visH=_crop.SIZE*_crop.zoom;
+  // Keep visible area inside image bounds
+  _crop.ox=Math.max(0,Math.min(nw-visW,_crop.ox));
+  _crop.oy=Math.max(0,Math.min(nh-visH,_crop.oy));
 }
 
-function cropZoomSlider(val){
-  applyCropZoom(parseFloat(val),_crop.SIZE/2,_crop.SIZE/2);
-}
-
-function applyCropZoom(newZoom,cx,cy){
-  const minZoom=Math.max(_crop.SIZE/(_crop.img?.width||_crop.SIZE),_crop.SIZE/(_crop.img?.height||_crop.SIZE));
-  newZoom=Math.max(minZoom*0.5,Math.min(newZoom,minZoom*8));
-  // Zoom towards centre point
-  const ratio=newZoom/_crop.zoom;
-  _crop.ox=cx-ratio*(cx-_crop.ox);
-  _crop.oy=cy-ratio*(cy-_crop.oy);
+function applyCropZoom(newZoom){
+  if(!_crop.img)return;
+  const nw=_crop.img.naturalWidth, nh=_crop.img.naturalHeight;
+  const minZoom=Math.max(1,Math.min(nw,nh)/_crop.SIZE*0.5);
+  const maxZoom=Math.min(nw,nh)/_crop.SIZE*4;
+  newZoom=Math.max(minZoom,Math.min(maxZoom,newZoom));
+  // Zoom around the centre of the visible area
+  const cx=_crop.ox+(_crop.SIZE*_crop.zoom)/2;
+  const cy=_crop.oy+(_crop.SIZE*_crop.zoom)/2;
   _crop.zoom=newZoom;
+  _crop.ox=cx-(_crop.SIZE*_crop.zoom)/2;
+  _crop.oy=cy-(_crop.SIZE*_crop.zoom)/2;
   clampCrop();drawCrop();
   const sl=document.getElementById('crop-zoom-slider');
   if(sl)sl.value=_crop.zoom;
 }
 
-function clampCrop(){
-  if(!_crop.img)return;
-  const iw=_crop.img.width*_crop.zoom,ih=_crop.img.height*_crop.zoom;
-  // Prevent image leaving the circle area (keep at least SIZE px covered)
-  if(iw>=_crop.SIZE){_crop.ox=Math.min(0,Math.max(_crop.SIZE-iw,_crop.ox));}
-  else{_crop.ox=Math.max(0,Math.min(_crop.SIZE-iw,_crop.ox));}
-  if(ih>=_crop.SIZE){_crop.oy=Math.min(0,Math.max(_crop.SIZE-ih,_crop.oy));}
-  else{_crop.oy=Math.max(0,Math.min(_crop.SIZE-ih,_crop.oy));}
+function cropZoom(delta){applyCropZoom(_crop.zoom+delta*_crop.zoom*0.1);}
+function cropZoomSlider(val){applyCropZoom(parseFloat(val));}
+
+function openCropModal(){
+  const modal=document.getElementById('avatar-crop-modal');
+  if(modal)modal.classList.add('show');
+  const wrap=document.getElementById('avatar-crop-canvas-wrap');
+  const cv=document.getElementById('avatar-crop-canvas');
+  if(!cv||!wrap)return;
+  cv.width=_crop.SIZE;cv.height=_crop.SIZE;
+
+  // ── Mouse ──
+  wrap.onmousedown=e=>{
+    _crop.dragging=true;
+    _crop.lastX=e.clientX;_crop.lastY=e.clientY;
+    e.preventDefault();
+  };
+  window.onmousemove=e=>{
+    if(!_crop.dragging)return;
+    // drag delta in canvas pixels → convert to image pixels
+    const dx=(e.clientX-_crop.lastX)*_crop.zoom;
+    const dy=(e.clientY-_crop.lastY)*_crop.zoom;
+    _crop.ox-=dx;_crop.oy-=dy;
+    _crop.lastX=e.clientX;_crop.lastY=e.clientY;
+    clampCrop();drawCrop();
+  };
+  window.onmouseup=()=>{_crop.dragging=false;};
+
+  // ── Scroll to zoom ──
+  const wheelHandler=e=>{
+    applyCropZoom(_crop.zoom*(1+e.deltaY*0.001));
+    e.preventDefault();
+  };
+  wrap.addEventListener('wheel',wheelHandler,{passive:false});
+
+  // ── Touch ──
+  const touchStart=e=>{
+    if(e.touches.length===1){
+      _crop.dragging=true;
+      _crop.lastX=e.touches[0].clientX;_crop.lastY=e.touches[0].clientY;
+    } else if(e.touches.length===2){
+      _crop.dragging=false;
+      _crop.lastDist=Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY);
+    }
+    e.preventDefault();
+  };
+  const touchMove=e=>{
+    if(e.touches.length===1&&_crop.dragging){
+      const dx=(e.touches[0].clientX-_crop.lastX)*_crop.zoom;
+      const dy=(e.touches[0].clientY-_crop.lastY)*_crop.zoom;
+      _crop.ox-=dx;_crop.oy-=dy;
+      _crop.lastX=e.touches[0].clientX;_crop.lastY=e.touches[0].clientY;
+      clampCrop();drawCrop();
+    } else if(e.touches.length===2){
+      const d=Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY);
+      const ratio=_crop.lastDist/d; // pinch in = larger zoom number
+      _crop.lastDist=d;
+      applyCropZoom(_crop.zoom*ratio);
+    }
+    e.preventDefault();
+  };
+  wrap.addEventListener('touchstart',touchStart,{passive:false});
+  wrap.addEventListener('touchmove',touchMove,{passive:false});
+  // Store refs to remove later
+  _crop._touchHandlers={wrap,wheelHandler,touchStart,touchMove};
+}
+
+function closeCropModal(){
+  const modal=document.getElementById('avatar-crop-modal');
+  if(modal)modal.classList.remove('show');
+  window.onmousemove=null;window.onmouseup=null;
+  if(_crop._touchHandlers){
+    const {wrap,wheelHandler,touchStart,touchMove}=_crop._touchHandlers;
+    wrap.removeEventListener('wheel',wheelHandler);
+    wrap.removeEventListener('touchstart',touchStart);
+    wrap.removeEventListener('touchmove',touchMove);
+    _crop._touchHandlers=null;
+  }
+  _crop.pid=null;_crop.img=null;
 }
 
 function confirmCrop(){
   if(!_crop.img||_crop.pid==null)return;
-  // Export the visible crop region at 512×512 (2× quality)
-  // ox/oy are the image top-left position on the 240px canvas in display coords.
-  // Convert back to source image pixel coords:
-  //   source_x = -ox / zoom,  source_y = -oy / zoom
-  //   source_w = SIZE / zoom,  source_h = SIZE / zoom
+  // Export exactly the visible region (ox,oy,SIZE*zoom,SIZE*zoom) at 512×512 output
   const OUT=512;
   const out=document.createElement('canvas');out.width=OUT;out.height=OUT;
   const ctx=out.getContext('2d');
-  const srcX = -_crop.ox / _crop.zoom;
-  const srcY = -_crop.oy / _crop.zoom;
-  const srcW = _crop.SIZE / _crop.zoom;
-  const srcH = _crop.SIZE / _crop.zoom;
-  ctx.drawImage(_crop.img, srcX, srcY, srcW, srcH, 0, 0, OUT, OUT);
+  ctx.drawImage(_crop.img,
+    _crop.ox, _crop.oy, _crop.SIZE*_crop.zoom, _crop.SIZE*_crop.zoom,
+    0, 0, OUT, OUT);
   const p=S.players.find(x=>x.id===_crop.pid);
   if(!p){closeCropModal();return;}
-  const b64=out.toDataURL('image/jpeg',0.82); // 0.82 = good quality/size balance at 512px
+  const b64=out.toDataURL('image/jpeg',0.88);
   const kb=Math.round(b64.length*0.75/1024);
-  console.log('[Avatar] Cropped image: '+kb+'KB');
-  if(kb>350){toast('⚠ Image too large ('+kb+'KB) — try zooming in more to crop tighter');closeCropModal();return;}
+  if(kb>400){toast('⚠ Image too large ('+kb+'KB) — zoom in more');closeCropModal();return;}
   p.avatarB64=b64;
-  autoSave();
-  renderPlayerProfile(p);
-  dbSaveAvatar(p);
+  autoSave();renderPlayerProfile(p);dbSaveAvatar(p);
   toast('📷 Avatar saved for '+p.name);
   closeCropModal();
 }
