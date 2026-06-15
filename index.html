@@ -1094,7 +1094,6 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   </div>
   <div class="dv"></div>
   <button class="btn btn-g btn-sm" onclick="autoMatchAll()">⚡ Auto-Match All</button>
-  <button class="btn btn-o btn-sm" onclick="clearAllCourts()">Clear Courts</button>
 </div>
 
 <!-- NAV (5 tabs) -->
@@ -2276,7 +2275,6 @@ function autoMatchAll(){
   for(const c of idle){const s=genMatches(c.courtMode||'doubles');if(s.length){startMatch(S.courts.indexOf(c),s[0]);cnt++}}
   if(!cnt)toast('Not enough available players');else toast('Matched '+cnt+' court'+(cnt>1?'s':'')+'!');
 }
-function clearAllCourts(){S.courts.forEach((_,i)=>{if(S.courts[i].status==='playing')cancelMatch(i)})}
 
 /* ── Matchmaking (FAIR + gender-balanced + excludes on-court players) ── */
 function availablePlayers(){
