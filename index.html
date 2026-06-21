@@ -888,6 +888,32 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .pl-item.compact .btn-red{padding:2px 6px;font-size:9px}
 .pl-item.compact .q-pos{font-size:13px;width:16px}
 
+/* ── Tournament Bracket ── */
+.bracket-rounds{display:flex;gap:28px;min-width:max-content;padding:10px 4px}
+.bracket-round{display:flex;flex-direction:column;justify-content:space-around;min-width:180px;gap:16px}
+.bracket-round-title{font-size:10px;font-weight:700;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em;text-align:center;margin-bottom:6px}
+.bracket-match{background:var(--b2);border:1px solid var(--gr2);border-radius:8px;padding:8px;position:relative}
+.bracket-match.decided{border-color:#2E7D52}
+.bracket-slot{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:5px;font-size:11px;font-weight:600;margin-bottom:3px;cursor:pointer;transition:all 0.15s;background:var(--b3)}
+.bracket-slot:last-child{margin-bottom:0}
+.bracket-slot:hover:not(.tbd):not(.winner-locked){background:var(--pkg)}
+.bracket-slot.tbd{color:var(--gr3);font-style:italic;cursor:default}
+.bracket-slot.winner{background:#001A00;color:#3DA06A;font-weight:800}
+.bracket-slot.winner::after{content:'✓';margin-left:4px}
+.bracket-slot.loser{opacity:0.4;text-decoration:line-through}
+.tourney-pick-chip{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gr2);background:var(--b2);cursor:pointer;margin-bottom:5px;transition:all 0.15s}
+.tourney-pick-chip.selected{border-color:var(--pk);background:var(--pkg)}
+.champion-banner{background:linear-gradient(135deg,#2A2000,#000);border:2px solid #FFD700;border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;animation:mythic-glow 2s ease-in-out infinite}
+
+/* ── Check-in Status Badge ── */
+.checkin-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;border:1px solid;flex-shrink:0}
+.checkin-early{color:#3DA06A;background:#001A00;border-color:#2E7D52}
+.checkin-ontime{color:#5BE5FF;background:#001030;border-color:#0080CC}
+.checkin-late{color:#FF6633;background:#1A0800;border-color:#CC4400}
+.checkin-btn{padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--gr2);background:transparent;color:var(--gr4);transition:all 0.15s}
+.checkin-btn.checked{background:#001A00;border-color:#2E7D52;color:#3DA06A}
+.checkin-btn:hover:not(.checked){border-color:var(--pkl);color:var(--pk)}
+
 /* ── Favourite Shot Badge ── */
 .shot-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;border:1px solid;text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0}
 
@@ -1103,6 +1129,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div class="nt" onclick="showView('players')">👤 Players</div>
   <div class="nt" onclick="showView('payment')">💰 Payment</div>
   <div class="nt" onclick="showView('leaderboard')">🏆 Board</div>
+  <div class="nt" onclick="showView('tournament')">🥇 Cup</div>
 </div>
 
 
@@ -1287,6 +1314,39 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   </div>
 </div>
 
+<!-- ══ TOURNAMENT ══ -->
+<div class="view" id="view-tournament">
+  <div style="background:var(--b2);border:1.5px solid var(--pkl);border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--pk);letter-spacing:0.08em">🥇 Tournament Bracket</div>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-xs btn-red" onclick="if(confirm('Clear the current tournament? This cannot be undone.'))clearTournament()" title="Clear tournament">✕ Clear</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--gr4)">Single-elimination bracket. Pick players, generate the bracket, then record winners as matches finish.</div>
+  </div>
+
+  <!-- Setup panel (shown when no tournament exists) -->
+  <div id="tourney-setup-panel">
+    <div class="sh"><div class="st">Select Players</div><span class="chip" id="tourney-sel-count">0 selected</span></div>
+    <div style="font-size:10px;color:var(--gr4);margin-bottom:8px">Pick an even number of players (4, 8, or 16 work best for clean brackets).</div>
+    <div class="slist" id="tourney-player-pick" style="max-height:320px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <select id="tourney-mode-sel" class="fc" style="flex:1;min-width:120px">
+        <option value="doubles">Doubles (teams of 2)</option>
+        <option value="singles">Singles (1v1)</option>
+      </select>
+      <button class="btn btn-g" style="flex:2;min-width:160px" onclick="generateBracket()">🏆 Generate Bracket</button>
+    </div>
+  </div>
+
+  <!-- Bracket display (shown when tournament exists) -->
+  <div id="tourney-bracket-panel" style="display:none">
+    <div id="tourney-champion-banner" style="display:none"></div>
+    <div id="tourney-bracket-wrap" style="overflow-x:auto;padding-bottom:10px"></div>
+  </div>
+</div>
+
 <!-- ══ PAYMENT ══ -->
 <div class="view" id="view-payment">
   <div style="background:var(--b2);border:1.5px solid var(--pkl);border-radius:10px;padding:14px;margin-bottom:12px">
@@ -1390,7 +1450,10 @@ let S={
   courtNicknames:{},     // court index -> custom name
   soundOn:true,          // sound effects enabled
   queueCompact:false,    // compact queue view
-  season:{id:null,champion:null}  // season tracking
+  season:{id:null,champion:null},  // season tracking
+  tournament:null,        // active tournament bracket
+  tourneySelected:[],     // player ids selected for new bracket
+  sessionStartedAt:null   // timestamp for check-in arrival tracking
 };
 const overtimeAlerted=new Set(); // courts already alerted for overtime this match
 
@@ -1422,6 +1485,8 @@ function saveSession(){
       pay: S.pay,
       queueSort: S.queueSort,
       season: S.season,
+      sessionStartedAt: S.sessionStartedAt,
+      tournament: S.tournament,
       currentSessionId: currentSessionId,
       advStates: ADV_STATES.map(st=>({
         pool: st.pool,
@@ -1452,6 +1517,8 @@ function restoreSession(){
     S.nextId   = snap.nextId   || 1;
     S.sugMode  = snap.sugMode  || 'doubles';
     if(snap.season)S.season=snap.season;
+    if(snap.sessionStartedAt)S.sessionStartedAt=snap.sessionStartedAt;
+    if(snap.tournament)S.tournament=snap.tournament;
     S.manager  = snap.manager  || {name:'',date:'',venue:''};
     S.queueSort= snap.queueSort|| 'fairness';
     S.pay      = snap.pay      || {};
@@ -2020,7 +2087,242 @@ function fairScore(p){
   const matchesAgo=(S.log.length)-(p.lastMatchAt||-99);
   // Penalty: just played (0-1 matches ago) = -2.5, 2 ago = -0.8, 3+ = 0
   const penalty=matchesAgo<=1?2.5:matchesAgo<=2?0.8:0;
-  return base-penalty;
+  // Arrival penalty: late check-ins queue behind on-time/early players
+  const arrivalPenalty=getCheckinStatus(p)==='late'?1.5:0;
+  return base-penalty-arrivalPenalty;
+}
+
+/* ── Check-in / Arrival Tracking ── */
+function checkInPlayer(pid_){
+  const p=pid(pid_);if(!p)return;
+  if(p.checkedInAt){
+    // Toggle off — undo check-in
+    p.checkedInAt=null;
+    toast(p.name+' check-in removed');
+  } else {
+    p.checkedInAt=Date.now();
+    const status=getCheckinStatus(p);
+    const label=status==='early'?'🟢 Early':status==='late'?'🔴 Late':'🔵 On-Time';
+    toast(label+' check-in: '+p.name);
+  }
+  renderAllPlayers();renderQueueList();autoSave();
+}
+
+// Determine arrival status based on session start time (manager.date set at session creation)
+// Early = checked in before session start time recorded in S.sessionStartedAt
+// On-Time = within 10 min of session start
+// Late = 10+ min after session start
+function getCheckinStatus(p){
+  if(!p.checkedInAt)return null;
+  const start=S.sessionStartedAt||S.checkInWindowStart;
+  if(!start)return'ontime'; // no reference point yet — default neutral
+  const diffMin=(p.checkedInAt-start)/60000;
+  if(diffMin<=-2)return'early';      // checked in before/at session start
+  if(diffMin<=10)return'ontime';     // within 10 min grace window
+  return'late';
+}
+
+function checkinBadgeHtml(p){
+  const status=getCheckinStatus(p);
+  if(!status)return'';
+  const map={early:{cls:'checkin-early',icon:'🟢',label:'Early'},ontime:{cls:'checkin-ontime',icon:'🔵',label:'On-Time'},late:{cls:'checkin-late',icon:'🔴',label:'Late'}};
+  const m=map[status];
+  return `<span class="checkin-badge ${m.cls}">${m.icon} ${m.label}</span>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   TOURNAMENT BRACKET SYSTEM
+   ══════════════════════════════════════════════════════ */
+
+function renderTournamentView(){
+  if(S.tournament){
+    document.getElementById('tourney-setup-panel').style.display='none';
+    document.getElementById('tourney-bracket-panel').style.display='block';
+    renderBracket();
+  } else {
+    document.getElementById('tourney-setup-panel').style.display='block';
+    document.getElementById('tourney-bracket-panel').style.display='none';
+    renderTourneyPlayerPick();
+  }
+}
+
+function renderTourneyPlayerPick(){
+  const wrap=document.getElementById('tourney-player-pick');if(!wrap)return;
+  const sorted=[...S.players].sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('tourney-sel-count').textContent=S.tourneySelected.length+' selected';
+  wrap.innerHTML=sorted.length?sorted.map(p=>{
+    const sel=S.tourneySelected.includes(p.id);
+    return `<div class="tourney-pick-chip ${sel?'selected':''}" onclick="toggleTourneyPick(${p.id})">
+      ${avHtml(p,28)}
+      <span style="flex:1;font-weight:700">${p.name}</span>
+      <span style="font-size:10px;color:var(--gr4)">${SKILL_N[p.skill]} · ${p.mmr||1000} MMR</span>
+      ${sel?'<span style="color:var(--pk);font-weight:800">✓</span>':''}
+    </div>`;
+  }).join(''):`<div class="empty-state">No players yet — add some in the Players tab.</div>`;
+}
+
+function toggleTourneyPick(pid_){
+  const i=S.tourneySelected.indexOf(pid_);
+  if(i>=0)S.tourneySelected.splice(i,1);
+  else S.tourneySelected.push(pid_);
+  renderTourneyPlayerPick();
+}
+
+function generateBracket(){
+  const mode=document.getElementById('tourney-mode-sel').value; // doubles | singles
+  const teamSize=mode==='doubles'?2:1;
+  const ids=[...S.tourneySelected];
+  const minNeeded=teamSize*2; // at least 1 match worth
+  if(ids.length<minNeeded){toast('⚠ Select at least '+minNeeded+' players');return;}
+
+  // Build entrants — for doubles, pair consecutive picks into teams of 2
+  let entrants=[];
+  if(mode==='doubles'){
+    // Shuffle lightly for variety, then pair up
+    const shuffled=[...ids];
+    for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+    for(let i=0;i+1<shuffled.length;i+=2){
+      entrants.push({ids:[shuffled[i],shuffled[i+1]],label:null});
+    }
+    if(shuffled.length%2!==0){toast('⚠ Odd number of players for doubles — last player left out');}
+  } else {
+    const shuffled=[...ids];
+    for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+    entrants=shuffled.map(id=>({ids:[id],label:null}));
+  }
+
+  // Pad to next power of 2 with byes
+  let bracketSize=1;
+  while(bracketSize<entrants.length)bracketSize*=2;
+  while(entrants.length<bracketSize)entrants.push({ids:[],label:'BYE'});
+
+  // Build round 1 matches
+  const round1=[];
+  for(let i=0;i<entrants.length;i+=2){
+    const a=entrants[i],b=entrants[i+1];
+    const match={a,b,winner:null};
+    // Auto-advance byes
+    if(a.label==='BYE'&&b.label!=='BYE')match.winner='b';
+    else if(b.label==='BYE'&&a.label!=='BYE')match.winner='a';
+    round1.push(match);
+  }
+
+  const totalRounds=Math.log2(bracketSize);
+  const rounds=[round1];
+  // Build empty subsequent rounds
+  let prevCount=round1.length;
+  for(let r=1;r<totalRounds;r++){
+    const count=prevCount/2;
+    const rd=[];
+    for(let i=0;i<count;i++)rd.push({a:{ids:[],label:'TBD'},b:{ids:[],label:'TBD'},winner:null});
+    rounds.push(rd);
+    prevCount=count;
+  }
+
+  S.tournament={mode,teamSize,rounds,champion:null,createdAt:Date.now()};
+  S.tourneySelected=[];
+  propagateByes();
+  autoSave();
+  renderTournamentView();
+  toast('🏆 Bracket generated! '+entrants.filter(e=>e.label!=='BYE').length+' entrants.');
+}
+
+// After byes auto-advance in round 1, push winners into round 2 slots
+function propagateByes(){
+  const t=S.tournament;if(!t)return;
+  for(let r=0;r<t.rounds.length-1;r++){
+    t.rounds[r].forEach((m,i)=>{
+      if(m.winner){
+        const winnerEntrant=m.winner==='a'?m.a:m.b;
+        const nextRound=t.rounds[r+1];
+        const nextMatchIdx=Math.floor(i/2);
+        const slot=i%2===0?'a':'b';
+        nextRound[nextMatchIdx][slot]=winnerEntrant;
+      }
+    });
+  }
+  // Check if final round has a decided winner → champion
+  const finalRound=t.rounds[t.rounds.length-1];
+  if(finalRound.length===1&&finalRound[0].winner){
+    const champEntrant=finalRound[0].winner==='a'?finalRound[0].a:finalRound[0].b;
+    t.champion=champEntrant;
+  }
+}
+
+function entrantLabel(entrant){
+  if(!entrant||!entrant.ids||!entrant.ids.length)return entrant?.label||'TBD';
+  return entrant.ids.map(id=>{const p=pid(id);return p?p.name:'?';}).join(' & ');
+}
+
+function pickBracketWinner(roundIdx,matchIdx,side){
+  const t=S.tournament;if(!t)return;
+  const m=t.rounds[roundIdx][matchIdx];
+  const entrant=side==='a'?m.a:m.b;
+  if(!entrant||!entrant.ids||!entrant.ids.length)return; // can't pick TBD/BYE as winner
+  m.winner=side;
+  propagateByes();
+  autoSave();
+  renderBracket();
+  const champ=t.champion;
+  if(champ){
+    toast('👑 Champion: '+entrantLabel(champ)+'!');
+    launchConfetti();
+  } else {
+    toast('✓ '+entrantLabel(entrant)+' advances!');
+  }
+}
+
+function renderBracket(){
+  const t=S.tournament;if(!t)return;
+  const wrap=document.getElementById('tourney-bracket-wrap');if(!wrap)return;
+  const champBanner=document.getElementById('tourney-champion-banner');
+
+  if(t.champion){
+    champBanner.style.display='block';
+    champBanner.innerHTML=`<div class="champion-banner">
+      <div style="font-size:36px;margin-bottom:6px">🏆</div>
+      <div style="font-size:11px;color:#FFD700;text-transform:uppercase;letter-spacing:0.1em;font-weight:700">Tournament Champion</div>
+      <div style="font-size:24px;font-weight:900;color:#fff;margin-top:4px">${entrantLabel(t.champion)}</div>
+    </div>`;
+  } else {
+    champBanner.style.display='none';
+  }
+
+  const roundNames=(total)=>{
+    const names=[];
+    for(let i=0;i<total;i++){
+      const remaining=total-i;
+      if(remaining===1)names.push('Final');
+      else if(remaining===2)names.push('Semifinal');
+      else if(remaining===3)names.push('Quarterfinal');
+      else names.push('Round '+(i+1));
+    }
+    return names;
+  };
+  const names=roundNames(t.rounds.length);
+
+  wrap.innerHTML=`<div class="bracket-rounds">${t.rounds.map((round,ri)=>`
+    <div class="bracket-round">
+      <div class="bracket-round-title">${names[ri]}</div>
+      ${round.map((m,mi)=>{
+        const aLabel=entrantLabel(m.a), bLabel=entrantLabel(m.b);
+        const aIsTbd=!m.a?.ids?.length, bIsTbd=!m.b?.ids?.length;
+        const aCls=m.winner==='a'?'winner':m.winner==='b'?'loser':aIsTbd?'tbd':'';
+        const bCls=m.winner==='b'?'winner':m.winner==='a'?'loser':bIsTbd?'tbd':'';
+        return `<div class="bracket-match ${m.winner?'decided':''}">
+          <div class="bracket-slot ${aCls} ${aIsTbd?'tbd':''}" onclick="${aIsTbd||m.winner?'':'pickBracketWinner('+ri+','+mi+',\'a\')'}">${aLabel}</div>
+          <div class="bracket-slot ${bCls} ${bIsTbd?'tbd':''}" onclick="${bIsTbd||m.winner?'':'pickBracketWinner('+ri+','+mi+',\'b\')'}">${bLabel}</div>
+        </div>`;
+      }).join('')}
+    </div>`).join('')}</div>`;
+}
+
+function clearTournament(){
+  S.tournament=null;
+  S.tourneySelected=[];
+  autoSave();
+  renderTournamentView();
+  toast('Tournament cleared');
 }
 
 // Balance score uses raw skill+WR without fairness penalty (so teams are still even)
@@ -2086,7 +2388,10 @@ function renderAllPlayers(){
         <div style="display:flex;align-items:center;gap:8px;min-width:0">
           ${avHtml(p)}
           <div style="flex:1;min-width:0">
-            <div class="pl-name" style="white-space:normal;word-break:break-word">${p.name}</div>
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+              <div class="pl-name" style="white-space:normal;word-break:break-word">${p.name}</div>
+              ${checkinBadgeHtml(p)}
+            </div>
             <div class="pl-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
               ${p.gender==='F'?'♀':'♂'} · ${p.wins}W ${p.losses}L · ${wr(p)}% · ${SKILL_N[p.skill]} · ${p.mmr||1000} MMR
             </div>
@@ -2095,6 +2400,7 @@ function renderAllPlayers(){
         </div>
         <!-- Row 2: action buttons -->
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+          <button class="checkin-btn ${p.checkedInAt?'checked':''}" onclick="checkInPlayer(${p.id})" title="Mark arrival" style="flex:1;min-width:60px">${p.checkedInAt?'✓ Checked In':'Check In'}</button>
           <button class="btn btn-xs btn-o" onclick="toggleEditName(${p.id})" title="Edit name" style="flex:1;min-width:60px">✎ Name</button>
           <button class="btn btn-xs btn-o" onclick="toggleEditSkill(${p.id})" title="Edit skill" style="flex:1;min-width:60px">✎ Skill</button>
           <button class="btn btn-sm ${p.onCourt?'btn-blue':p.inQueue?'btn-red':'btn-o'}"
@@ -2137,10 +2443,13 @@ function openMgrModal(){
   document.getElementById('mgr-modal').classList.add('open');
 }
 function saveManager(){
+  const isNewSession=!S.manager.name;
   S.manager.name=document.getElementById('mgr-name-inp').value.trim()||'Manager';
   S.manager.date=document.getElementById('mgr-date-inp').value;
   S.manager.venue=document.getElementById('mgr-venue-inp').value.trim();
   document.getElementById('mgr-disp').textContent=S.manager.name;
+  // Mark session start time for check-in arrival tracking (only on first save)
+  if(isNewSession||!S.sessionStartedAt)S.sessionStartedAt=Date.now();
   if(S.manager.date){
     const d=new Date(S.manager.date+'T00:00:00');
     const ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -2645,7 +2954,7 @@ function renderQueueList(){
     const card=`<div class="pl-item ${S.queueCompact?'compact':''} ${isNextUp&&!S.queueCompact?'next-up':''} ${inA?'sel-a':inB?'sel-b':''} ${tierCls}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
       <div class="q-pos ${posCls}">${i+1}</div>${avHtml(p)}
       <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${tBadge}${recentBadge}${gcBadge}${streakBadge}${shotHtml(p,true)}${formDots}</div>
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${checkinBadgeHtml(p)}${tBadge}${recentBadge}${gcBadge}${streakBadge}${shotHtml(p,true)}${formDots}</div>
         <div class="pl-meta">${p.gender==='F'?'Female':'Male'} · ${p.wins}W ${p.losses}L · ${wr(p)}% WR · ${p.mmr||1000} MMR</div>
       </div>
       ${mmrBadgeHtml(p.mmr||1000)}
@@ -2937,7 +3246,7 @@ function showView(v){
   document.querySelectorAll('.nt').forEach(el=>{
     if(el.getAttribute('onclick')===`showView('${v}')`)el.classList.add('active');
   });
-  if(v==='payment')renderPayment();else render();
+  if(v==='payment')renderPayment();else if(v==='tournament')renderTournamentView();else render();
 }
 
 let toastTimer;
