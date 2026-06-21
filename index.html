@@ -79,12 +79,18 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 /* Nav */
 .nav{display:flex;background:var(--b2);border-bottom:1px solid var(--gr);flex-shrink:0}
-.nt{flex:1;padding:9px 4px;text-align:center;cursor:pointer;font-size:10px;font-weight:600;color:var(--gr4);border-bottom:2px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.06em}
+.nt{flex:1;padding:9px 4px;text-align:center;cursor:pointer;font-size:10px;font-weight:600;color:var(--gr4);border-bottom:2px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.06em;position:relative}
+.nt-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--pk);color:#fff;font-size:9px;font-weight:800;margin-left:4px;vertical-align:middle}
 .nt.active{color:var(--pk);border-bottom-color:var(--pk)}
 .nt:hover:not(.active){color:var(--w2);background:var(--b3)}
 
 /* Toast */
 .toast-bar{padding:4px 18px;height:26px;flex-shrink:0;display:flex;align-items:center}
+
+/* ── Sticky Start Match bar ── */
+.sticky-start-bar{position:fixed;left:50%;bottom:-80px;transform:translateX(-50%);z-index:500;display:flex;align-items:center;gap:10px;background:var(--b2);border:1.5px solid var(--pkl);border-radius:30px;padding:8px 10px 8px 16px;box-shadow:0 6px 24px rgba(0,0,0,0.35);transition:bottom 0.25s ease;font-size:12px;font-weight:700;color:var(--pk);max-width:92vw}
+.sticky-start-bar.show{bottom:70px}
+@media (min-width:701px){.sticky-start-bar.show{bottom:18px}}
 .toast-msg{font-size:11px;font-weight:600;color:var(--pk);opacity:0;transition:opacity 0.3s}
 .toast-msg.show{opacity:1}
 
@@ -376,6 +382,14 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 /* Player items */
 .pl-item{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--b2);border:1px solid var(--gr);border-radius:8px;margin-bottom:6px;transition:all 0.15s}
+
+/* ── Swipe gestures (mobile) ── */
+.pl-item.swipeable{position:relative;overflow:hidden;padding:0;display:block}
+.pl-item.swipeable .swipe-content{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--b2);position:relative;z-index:2;transition:transform 0.2s ease;touch-action:pan-y}
+.pl-item.swipeable .swipe-bg-left,.pl-item.swipeable .swipe-bg-right{position:absolute;top:0;bottom:0;display:flex;align-items:center;font-size:11px;font-weight:700;color:#fff;padding:0 16px;z-index:1}
+.pl-item.swipeable .swipe-bg-left{left:0;background:#2E7D52;justify-content:flex-start}
+.pl-item.swipeable .swipe-bg-right{right:0;background:#CC4444;justify-content:flex-end}
+.pl-item.swipeable.swiping .swipe-content{transition:none}
 .pl-item.tier-pacer{border-color:#008080;animation:card-pacer 2.5s ease-in-out infinite}
 .pl-item.tier-tactician{border-color:#0080CC;animation:card-diamond 2.2s ease-in-out infinite}
 .pl-item.tier-deceiver{border-color:#7B2FBE;animation:card-epic 2s ease-in-out infinite}
@@ -477,6 +491,15 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .slist::-webkit-scrollbar{width:3px}
 .slist::-webkit-scrollbar-thumb{background:var(--gr2);border-radius:2px}
 .empty-state{text-align:center;padding:24px 16px;color:var(--gr4);font-size:12px}
+.empty-cta-btn{margin-top:10px;padding:8px 18px;border-radius:8px;border:1px solid var(--pkl);background:var(--pkg);color:var(--pk);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s}
+.empty-cta-btn:hover{background:var(--pk);color:#fff}
+
+/* ── Global Search (Cmd/Ctrl+K) ── */
+.gsearch-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background 0.12s}
+.gsearch-row:hover,.gsearch-row.active{background:var(--pkg)}
+.gsearch-row .gs-name{flex:1;font-weight:700;font-size:13px}
+.gsearch-row .gs-meta{font-size:10px;color:var(--gr4)}
+.gsearch-section-lbl{font-size:9px;font-weight:700;color:var(--gr4);text-transform:uppercase;letter-spacing:0.08em;padding:6px 10px 2px}
 .info-note{font-size:10px;color:var(--gr4);background:var(--b3);border:1px solid var(--gr2);border-radius:4px;padding:5px 10px;margin-bottom:10px}
 .info-note b{color:var(--pk)}
 /* Supabase sync bar */
@@ -1123,6 +1146,8 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <div class="sync-dot" id="sync-dot"></div>
   <span class="sync-lbl" id="sync-lbl">Connecting to Supabase…</span>
   <div style="display:flex;align-items:center;gap:6px;margin-right:auto"><button class="btn btn-xs" id="theme-toggle-btn" onclick="toggleTheme()" style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--gr2);background:var(--b2);color:var(--gr4);cursor:pointer" title="Cycle themes: Light → Dark → Gold">🌙 Dark</button></div><div class="sync-actions">
+    <button class="btn btn-o btn-xs" onclick="openGlobalSearch()" title="Search players & tabs (Ctrl/Cmd+K)">🔍 Search</button>
+    <button id="undo-btn" class="btn btn-xs btn-o" onclick="performUndo()" title="Undo last action" style="display:none;align-items:center;gap:3px">↩ Undo</button>
     <button class="btn btn-o btn-xs" onclick="syncAll()" title="Force sync everything to database">↑ Sync Now</button>
     <button class="btn btn-o btn-xs" onclick="loadFromDB()" title="Reload data from database">↓ Load DB</button>
     <button class="btn btn-o btn-xs" onclick="resumeSession()" title="Resume session from cloud backup on any device">☁ Resume</button>
@@ -1150,8 +1175,8 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 <!-- NAV (5 tabs) -->
 <div class="nav">
-  <div class="nt active" onclick="showView('courts')">🏟 Courts</div>
-  <div class="nt" onclick="showView('queue')">📋 Queue</div>
+  <div class="nt active" onclick="showView('courts')">🏟 Courts<span class="nt-badge" id="nt-badge-courts" style="display:none"></span></div>
+  <div class="nt" onclick="showView('queue')">📋 Queue<span class="nt-badge" id="nt-badge-queue" style="display:none"></span></div>
   <div class="nt" onclick="showView('players')">👤 Players</div>
   <div class="nt" onclick="showView('payment')">💰 Payment</div>
   <div class="nt" onclick="showView('leaderboard')">🏆 Board</div>
@@ -1165,6 +1190,12 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   <button onclick="event.stopPropagation();clearAnnouncement()" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px">✕</button>
 </div>
 <div class="toast-bar"><span class="toast-msg" id="toast"></span></div>
+
+<!-- Sticky Start Match floating bar -->
+<div id="sticky-start-bar" class="sticky-start-bar">
+  <span id="sticky-start-label">▶ Start Match</span>
+  <button class="btn btn-g btn-sm" onclick="fireStickyStart()" style="margin-left:auto">Go ▶</button>
+</div>
 
 <div class="main">
 
@@ -1232,7 +1263,7 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 <div class="view" id="view-players">
   <div class="two-col">
     <div>
-      <div class="sh"><div class="st">Add Player</div></div>
+      <div class="sh"><div class="st">Add Player</div><button class="btn btn-xs btn-o" style="margin-left:auto" onclick="openBulkImport()" title="Add multiple players at once">📋 Bulk Import</button></div>
       <div style="background:var(--b2);border:1px solid var(--pkl);border-radius:8px;padding:14px;margin-bottom:14px">
         <div class="form-row">
           <div class="fg"><label>Full Name</label><input class="fc" id="p-name" placeholder="Player name"/></div>
@@ -1485,6 +1516,31 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
   </div>
 </div>
 
+<!-- Global Search (Cmd/Ctrl+K) -->
+<div class="backdrop" id="gsearch-backdrop" onclick="if(event.target===this)closeGlobalSearch()">
+  <div class="modal" style="max-width:480px;padding-top:14px">
+    <input id="gsearch-input" type="search" placeholder="🔍 Search players, jump to a tab…" autocomplete="off"
+      style="width:100%;background:var(--b3);border:1.5px solid var(--pkl);border-radius:8px;color:var(--w);padding:10px 14px;font-size:15px;outline:none;box-sizing:border-box;margin-bottom:10px"
+      oninput="renderGlobalSearchResults(this.value)"/>
+    <div id="gsearch-results" style="max-height:50vh;overflow-y:auto"></div>
+    <div style="font-size:10px;color:var(--gr4);margin-top:8px;text-align:center">Esc to close · Enter to select first result</div>
+  </div>
+</div>
+
+<!-- Bulk Import Modal -->
+<div class="backdrop" id="bulk-import-backdrop">
+  <div class="modal">
+    <div class="modal-ttl">📋 Bulk Import Players</div>
+    <div style="font-size:11px;color:var(--gr4);margin-bottom:10px">Paste one name per line. Everyone is added with default settings (Male, Skill C, Any mode) — edit individually after.</div>
+    <textarea id="bulk-import-text" placeholder="Jaydee&#10;Ali&#10;Darrel&#10;Ajish&#10;..." style="width:100%;min-height:160px;background:var(--b3);border:1px solid var(--gr2);border-radius:8px;color:var(--w);padding:10px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;box-sizing:border-box;outline:none"></textarea>
+    <div id="bulk-import-preview" style="font-size:11px;color:var(--gr4);margin:8px 0"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-o" onclick="document.getElementById('bulk-import-backdrop').classList.remove('open')" style="flex:1">Cancel</button>
+      <button class="btn btn-g" onclick="confirmBulkImport()" style="flex:2">+ Add All Players</button>
+    </div>
+  </div>
+</div>
+
 <!-- Lucky Draw Modal -->
 <div class="backdrop" id="lucky-modal-backdrop">
   <div class="modal" style="text-align:center">
@@ -1695,6 +1751,78 @@ function clearSession(){
   toast('Session cleared ✓');
 }
 
+/* ── Demo / Sample Data ── */
+const DEMO_NAMES=[
+  {name:'Alex Chen',gender:'M',skill:4},
+  {name:'Mia Santos',gender:'F',skill:3},
+  {name:'Ravi Kumar',gender:'M',skill:5},
+  {name:'Lena Park',gender:'F',skill:2},
+  {name:'Omar Hassan',gender:'M',skill:3},
+  {name:'Sofia Cruz',gender:'F',skill:4},
+  {name:'Daniel Wu',gender:'M',skill:2},
+  {name:'Priya Singh',gender:'F',skill:5},
+];
+
+function loadDemoData(){
+  if(S.players.length){
+    if(!confirm('This will add 8 sample players to your current roster. Continue?'))return;
+  }
+  DEMO_NAMES.forEach(d=>{
+    if(S.players.find(x=>x.name.toLowerCase()===d.name.toLowerCase()))return; // skip dupes
+    const p={id:S.nextId++,name:d.name,gender:d.gender,skill:d.skill,mode:'any',
+      wins:Math.floor(Math.random()*8),losses:Math.floor(Math.random()*8),
+      mmr:900+Math.floor(Math.random()*800),inQueue:true,onCourt:false,lastMatchAt:-99,queueCount:1};
+    p.matches=p.wins+p.losses;
+    S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
+  });
+  render();renderPayment();autoSave();
+  toast('🎮 Demo players loaded! Explore the app, then clear them anytime from Players tab.');
+}
+
+/* ── Repeat Last Session ── */
+const LAST_ROSTER_KEY='whack_last_roster_v1';
+
+function saveLastRosterSnapshot(){
+  try{
+    if(!S.players.length)return;
+    const snapshot={
+      players:S.players.map(p=>({name:p.name,gender:p.gender,skill:p.skill,mode:p.mode})),
+      courtCount:S.courts.length,
+      savedAt:Date.now()
+    };
+    localStorage.setItem(LAST_ROSTER_KEY,JSON.stringify(snapshot));
+  }catch(e){}
+}
+
+function getLastRoster(){
+  try{
+    const raw=localStorage.getItem(LAST_ROSTER_KEY);
+    if(!raw)return null;
+    return JSON.parse(raw);
+  }catch(e){return null;}
+}
+
+function repeatLastSession(){
+  const snap=getLastRoster();
+  if(!snap||!snap.players?.length){toast('No previous session found');return;}
+  if(S.players.length){
+    if(!confirm(`Load ${snap.players.length} players from your last session? This adds to your current roster.`))return;
+  }
+  pushUndoSnapshot('Repeat last session');
+  let added=0;
+  snap.players.forEach(d=>{
+    if(S.players.find(x=>x.name.toLowerCase()===d.name.toLowerCase()))return;
+    const p={id:S.nextId++,name:d.name,gender:d.gender||'M',skill:d.skill||3,mode:d.mode||'any',
+      wins:0,losses:0,matches:0,mmr:1000,inQueue:true,onCourt:false,lastMatchAt:-99,queueCount:1};
+    S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
+    grantAttendanceBonus(p);
+    added++;
+  });
+  if(snap.courtCount)initCourts(snap.courtCount);
+  render();renderPayment();autoSave();
+  toast(`✓ ${added} player${added!==1?'s':''} restored from last session`);
+}
+
 /* Confirm and end the session — shown from the Session Setup modal */
 function confirmEndSession(){
   document.getElementById('mgr-modal').classList.remove('open');
@@ -1702,6 +1830,7 @@ function confirmEndSession(){
     document.getElementById('mgr-modal').classList.add('open');
     return;
   }
+  saveLastRosterSnapshot(); // preserve roster for "Repeat Last Session"
   clearSession();
   location.reload();
 }
@@ -1770,6 +1899,52 @@ function saveName(pid_, val){
 }
 
 // Auto-save after any state-changing action
+/* ══════════════════════════════════════════════════════
+   UNDO SYSTEM — snapshot-based, covers: dequeue, remove player,
+   match result, payment status change
+   ══════════════════════════════════════════════════════ */
+let _undoStack=[];
+const UNDO_MAX=10;
+
+function pushUndoSnapshot(label){
+  const snap={
+    label,
+    ts:Date.now(),
+    players:JSON.parse(JSON.stringify(S.players)),
+    queue:[...S.queue],
+    courts:JSON.parse(JSON.stringify(S.courts)),
+    log:JSON.parse(JSON.stringify(S.log)),
+    pay:JSON.parse(JSON.stringify(S.pay))
+  };
+  _undoStack.push(snap);
+  if(_undoStack.length>UNDO_MAX)_undoStack.shift();
+  updateUndoButton();
+}
+
+function performUndo(){
+  if(!_undoStack.length){toast('Nothing to undo');return;}
+  const snap=_undoStack.pop();
+  S.players=snap.players;
+  S.queue=snap.queue;
+  S.courts=snap.courts;
+  S.log=snap.log;
+  S.pay=snap.pay;
+  render();renderPayment();autoSave();
+  updateUndoButton();
+  toast('↩ Undone: '+snap.label);
+}
+
+function updateUndoButton(){
+  const btn=document.getElementById('undo-btn');
+  if(!btn)return;
+  if(_undoStack.length){
+    btn.style.display='flex';
+    btn.title='Undo: '+_undoStack[_undoStack.length-1].label;
+  } else {
+    btn.style.display='none';
+  }
+}
+
 function autoSave(){
   saveSession();
   // Also persist new state fields (announcement, nicknames, sound)
@@ -2175,6 +2350,7 @@ function renderAdvPanel(n){
   if(cp) cp.innerHTML=S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" style="${st.targetCourt===ci?'border-color:var(--pk);color:var(--pk);background:var(--pkg)':''}" onclick="${c.status==='idle'?`setAdvCourt(${n},${ci})`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('');
 
   if(startBtn) startBtn.disabled=!(full&&st.targetCourt!==null&&S.courts[st.targetCourt]?.status==='idle');
+  updateStickyStartBar();
 }
 
 // FAIR score: penalises players who just played so they go to back of priority
@@ -2529,7 +2705,7 @@ function renderAllPlayers(){
         <button class="btn btn-xs btn-o" onclick="S.editingSkill=null;renderAllPlayers()">Cancel</button>
       </div>`:''}
     </div>`).join('')
-  :`<div class="empty-state">No players yet — add some above!</div>`;
+  :`<div class="empty-state">No players yet.<br><button class="empty-cta-btn" onclick="document.getElementById('p-name').focus()">+ Add Your First Player</button><br>${getLastRoster()?`<button class="empty-cta-btn" style="margin-top:6px" onclick="repeatLastSession()">🔁 Repeat Last Session (${getLastRoster().players.length} players)</button><br>`:''}<button class="empty-cta-btn" style="margin-top:6px;background:transparent;border-color:var(--gr2);color:var(--gr4)" onclick="loadDemoData()">🎮 Try with Sample Data</button></div>`;
 }
 
 /* ── Manager ── */
@@ -2604,6 +2780,7 @@ function endMatch(ci,winner){
     toast('⚠ No manager set — match not recorded. Set a manager to track stats.');
     return;
   }
+  pushUndoSnapshot('Match result on Court '+court.id);
   clearInterval(court.timer);
   const m=court.match,matchIdx=S.log.length;
   const winners=winner===1?m.team1:m.team2,losers=winner===1?m.team2:m.team1;
@@ -2843,7 +3020,50 @@ function updateBuilderUI(){
   if(cp)cp.innerHTML=S.courts.map((c,ci)=>`<button class="court-pill ${c.status==='idle'?'avail':'busy'}" style="${b.targetCourt===ci?'border-color:var(--pk);color:var(--pk);background:var(--pkg)':''}" onclick="${c.status==='idle'?`setBuilderCourt(${ci})`:''}" ${c.status!=='idle'?'disabled':''}>Court ${c.id}${c.status==='playing'?' (busy)':''}</button>`).join('');
   const sb2=document.getElementById('builder-start-btn');
   if(sb2)sb2.disabled=!(b.teamA.length===needed&&b.teamB.length===needed&&b.targetCourt!==null&&S.courts[b.targetCourt]?.status==='idle');
+  updateStickyStartBar();
 }
+
+/* ── Sticky "Start Match" floating button ──
+   Shows whenever any Start Match button (3 adv panels + manual builder)
+   is enabled, so the action stays reachable while scrolled down. */
+function updateStickyStartBar(){
+  const bar=document.getElementById('sticky-start-bar');
+  if(!bar)return;
+  // Find the first enabled, ready-to-fire Start Match button
+  const candidates=[
+    {id:'builder-start-btn',label:'Manual Builder',fn:'startManualMatch'},
+    {id:'adv-start-btn-0',label:'Match 1',fn:'startAdvMatch(0)'},
+    {id:'adv-start-btn-1',label:'Match 2',fn:'startAdvMatch(1)'},
+    {id:'adv-start-btn-2',label:'Match 3',fn:'startAdvMatch(2)'},
+  ];
+  const ready=candidates.find(c=>{
+    const el=document.getElementById(c.id);
+    return el&&!el.disabled;
+  });
+  // Only show on the Courts/Queue view where match-starting is relevant, and only if not already visible on screen
+  const activeView=document.querySelector('.view.active');
+  const onRelevantView=activeView&&(activeView.id==='view-courts'||activeView.id==='view-queue');
+  if(!ready||!onRelevantView){
+    bar.classList.remove('show');
+    return;
+  }
+  bar.querySelector('#sticky-start-label').textContent='▶ Start '+ready.label;
+  bar.dataset.fn=ready.fn;
+  bar.classList.add('show');
+}
+
+function fireStickyStart(){
+  const bar=document.getElementById('sticky-start-bar');
+  if(!bar||!bar.dataset.fn)return;
+  const fnCall=bar.dataset.fn;
+  if(fnCall==='startManualMatch')startManualMatch();
+  else{
+    const m=fnCall.match(/startAdvMatch\((\d+)\)/);
+    if(m)startAdvMatch(parseInt(m[1]));
+  }
+}
+
+
 
 /* ── Players ── */
 async function addPlayer(){
@@ -2877,14 +3097,148 @@ function grantAttendanceBonus(p){
   toast('🎉 '+p.name+' received +200 MMR attendance bonus!');
 }
 
+/* ── Bulk Player Import ── */
+/* ── Global Search (Cmd/Ctrl+K) ── */
+const GS_TABS=[
+  {key:'courts',label:'🏟 Courts',keywords:['courts','matches','live']},
+  {key:'queue',label:'📋 Queue',keywords:['queue','waiting','list']},
+  {key:'players',label:'👤 Players',keywords:['players','roster','add player']},
+  {key:'payment',label:'💰 Payment',keywords:['payment','fee','money','cost']},
+  {key:'leaderboard',label:'🏆 Board',keywords:['board','leaderboard','rank','season','mvp']},
+  {key:'tournament',label:'🥇 Cup',keywords:['tournament','cup','bracket']},
+];
+
+function openGlobalSearch(){
+  const bd=document.getElementById('gsearch-backdrop');
+  if(!bd)return;
+  bd.classList.add('open');
+  const inp=document.getElementById('gsearch-input');
+  inp.value='';
+  renderGlobalSearchResults('');
+  setTimeout(()=>inp.focus(),50);
+}
+
+function closeGlobalSearch(){
+  const bd=document.getElementById('gsearch-backdrop');
+  if(bd)bd.classList.remove('open');
+}
+
+function renderGlobalSearchResults(query){
+  const wrap=document.getElementById('gsearch-results');
+  if(!wrap)return;
+  const q=query.toLowerCase().trim();
+
+  // Match players
+  const playerMatches=q
+    ? S.players.filter(p=>p.name.toLowerCase().includes(q)).slice(0,6)
+    : S.players.slice(0,4); // show a few recent/first players by default
+
+  // Match tabs
+  const tabMatches=q
+    ? GS_TABS.filter(t=>t.label.toLowerCase().includes(q)||t.keywords.some(k=>k.includes(q)))
+    : GS_TABS;
+
+  let html='';
+  if(playerMatches.length){
+    html+=`<div class="gsearch-section-lbl">Players</div>`;
+    html+=playerMatches.map(p=>{
+      const t=mmrTier(p.mmr||1000);
+      return `<div class="gsearch-row" onclick="gsJumpToPlayer(${p.id})">
+        ${avHtml(p,28)}
+        <span class="gs-name">${p.name}</span>
+        <span class="gs-meta">${t.icon} ${p.mmr||1000} MMR</span>
+      </div>`;
+    }).join('');
+  }
+  if(tabMatches.length){
+    html+=`<div class="gsearch-section-lbl">Jump to Tab</div>`;
+    html+=tabMatches.map(t=>`<div class="gsearch-row" onclick="gsJumpToTab('${t.key}')">
+      <span class="gs-name">${t.label}</span>
+    </div>`).join('');
+  }
+  if(!playerMatches.length&&!tabMatches.length){
+    html=`<div class="empty-state">No matches for "${query}"</div>`;
+  }
+  wrap.innerHTML=html;
+}
+
+function gsJumpToPlayer(pid_){
+  closeGlobalSearch();
+  showView('players');
+  setTimeout(()=>{
+    const p=S.players.find(x=>x.id===pid_);
+    if(p)selectProfile(pid_);
+  },80);
+}
+
+function gsJumpToTab(key){
+  closeGlobalSearch();
+  showView(key);
+}
+
+function openBulkImport(){
+  document.getElementById('bulk-import-text').value='';
+  document.getElementById('bulk-import-preview').textContent='';
+  document.getElementById('bulk-import-backdrop').classList.add('open');
+  setTimeout(()=>document.getElementById('bulk-import-text').focus(),50);
+}
+
+function parseBulkNames(){
+  const raw=document.getElementById('bulk-import-text').value;
+  const lines=raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  // De-dupe within the pasted list itself (case-insensitive)
+  const seen=new Set();
+  const names=[];
+  lines.forEach(l=>{
+    const key=l.toLowerCase();
+    if(!seen.has(key)){seen.add(key);names.push(l);}
+  });
+  return names;
+}
+
+// Live preview as they type (optional, wired via oninput below)
+document.addEventListener('DOMContentLoaded',()=>{
+  const ta=document.getElementById('bulk-import-text');
+  if(ta)ta.addEventListener('input',()=>{
+    const names=parseBulkNames();
+    const existing=names.filter(n=>S.players.find(p=>p.name.toLowerCase()===n.toLowerCase()));
+    const preview=document.getElementById('bulk-import-preview');
+    if(preview){
+      preview.textContent=names.length
+        ? `${names.length} player${names.length>1?'s':''} ready to add${existing.length?` (${existing.length} already in session — will be skipped)`:''}`
+        : '';
+    }
+  });
+});
+
+async function confirmBulkImport(){
+  const names=parseBulkNames();
+  if(!names.length){toast('Paste at least one name');return;}
+  pushUndoSnapshot('Bulk import '+names.length+' players');
+  let added=0,skipped=0;
+  for(const name of names){
+    if(S.players.find(x=>x.name.toLowerCase()===name.toLowerCase())){skipped++;continue;}
+    const p={id:S.nextId++,name,gender:'M',skill:3,mode:'any',wins:0,losses:0,matches:0,mmr:1000,inQueue:true,onCourt:false,lastMatchAt:-99,queueCount:1};
+    S.players.push(p);S.queue.push(p.id);S.pay[String(p.id)]={status:'unpaid',note:''};
+    grantAttendanceBonus(p);
+    added++;
+  }
+  document.getElementById('bulk-import-backdrop').classList.remove('open');
+  render();autoSave();
+  toast(`✓ ${added} player${added!==1?'s':''} added${skipped?` · ${skipped} skipped (duplicates)`:''}`);
+  // Best-effort background DB sync for each new player
+  S.players.slice(-added).forEach(p=>{ dbSavePlayer(p).catch(()=>{}); });
+}
+
 function toggleQueue(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
-  if(p.inQueue){p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);if(p.attendanceBonus){p.attendanceBonus=false;p.mmr=Math.max(0,(p.mmr||1000)-200);}toast(p.name+' left queue')}
+  if(p.inQueue){pushUndoSnapshot('Dequeue '+p.name);p.inQueue=false;S.queue=S.queue.filter(x=>x!==pid_);if(p.attendanceBonus){p.attendanceBonus=false;p.mmr=Math.max(0,(p.mmr||1000)-200);}toast(p.name+' left queue')}
   else{p.inQueue=true;S.queue.push(pid_);p.queueCount=(p.queueCount||0)+1;grantAttendanceBonus(p);toast(p.name+' joined queue');playSound('queue')}
   render();autoSave();
 }
 function removePlayer(pid_){
   const p=pid(pid_);if(!p||p.onCourt)return;
+  pushUndoSnapshot('Remove '+p.name);
   S.players=S.players.filter(x=>x.id!==pid_);S.queue=S.queue.filter(x=>x!==pid_);delete S.pay[String(pid_)];
   toast(p.name+' removed');render();autoSave();
   if(p.dbId) dbDeletePlayer(p).catch(e=>console.error('DB delete failed:',e));
@@ -2944,7 +3298,7 @@ function renderPayment(){
   const excludedHtml=excludedPlayers.length?`<div class="info-note" style="margin-bottom:10px">🚫 ${excludedPlayers.length} player${excludedPlayers.length>1?'s':''} excluded from payment: <b>${excludedPlayers.map(p=>p.name).join(', ')}</b></div>`:'';
 
   if(!allActive.length){
-    pl.innerHTML='<div class="empty-state">No players in the queue yet.<br>Toggle players to queue in the Players tab.</div>';
+    pl.innerHTML=`<div class="empty-state">No players in the queue yet.<br><button class="empty-cta-btn" onclick="showView('players')">👤 Go to Players Tab</button></div>`;
     return;
   }
   if(!activePlayers.length){
@@ -2992,6 +3346,7 @@ function renderPayment(){
 function setPayStatus(pid_,status){
   const key=String(pid_);
   if(!S.pay[key])S.pay[key]={status:'unpaid',note:''};
+  if(S.pay[key].status!==status){const p=pid(pid_);pushUndoSnapshot('Payment status for '+(p?p.name:'player'));}
   S.pay[key].status=status;
   renderPayment();autoSave();
   const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
@@ -3173,7 +3528,7 @@ function renderQueueList(){
   const nextUpCount=Math.max(4, freeCourts*4);
 
   if(!sorted.length){
-    ql.innerHTML=`<div class="empty-state">Queue is empty.<br>Add players in the Players tab.</div>`;
+    ql.innerHTML=`<div class="empty-state">Queue is empty.<br><button class="empty-cta-btn" onclick="showView('players')">👤 Go to Players Tab</button></div>`;
     return;
   }
 
@@ -3199,7 +3554,10 @@ function renderQueueList(){
     const sep=(i===nextUpCount-1&&sorted.length>nextUpCount)
       ?`<div class="next-up-sep">· · · waiting · · ·</div>`:'';
 
-    const card=`<div class="pl-item ${S.queueCompact?'compact':''} ${isNextUp&&!S.queueCompact?'next-up':''} ${inA?'sel-a':inB?'sel-b':''} ${tierCls}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
+    const card=`<div class="pl-item swipeable ${S.queueCompact?'compact':''} ${isNextUp&&!S.queueCompact?'next-up':''} ${inA?'sel-a':inB?'sel-b':''} ${tierCls}" data-pid="${p.id}" onclick="addToBuilder(${p.id})" style="cursor:pointer">
+      <div class="swipe-bg-left">🔁 Add to Match</div>
+      <div class="swipe-bg-right">✕ Remove</div>
+      <div class="swipe-content">
       <div class="q-pos ${posCls}">${i+1}</div>${avHtml(p)}
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="pl-name" style="flex:none">${p.name}</span>${checkinBadgeHtml(p)}${tBadge}${recentBadge}${gcBadge}${streakBadge}${shotHtml(p,true)}${formDots}</div>
@@ -3208,11 +3566,13 @@ function renderQueueList(){
       ${mmrBadgeHtml(p.mmr||1000)}
       <div class="sk ${SKILL_C[p.skill]}">${SKILL_N[p.skill]}</div>
       <button class="btn btn-red btn-xs" onclick="event.stopPropagation();removeFromQueue(${p.id})" style="margin-left:5px">Remove</button>
+      </div>
     </div>`;
     return card+sep;
   });
 
   ql.innerHTML=items.join('');
+  attachSwipeHandlers();
 }
 
 function render(){
@@ -3224,6 +3584,19 @@ function render(){
   renderCourts();renderQueueList();updateBuilderUI();
   const advPanel=document.getElementById('adv-mm-panels-wrap');
   if(advPanel) for(let i=0;i<ADV_COUNT;i++) if(ADV_OPEN[i]) renderAdvPanel(i);
+
+  // Tab badges: Queue = waiting count, Courts = active matches count
+  const activeMatches=S.courts.filter(c=>c.status==='playing').length;
+  const queueBadge=document.getElementById('nt-badge-queue');
+  const courtsBadge=document.getElementById('nt-badge-courts');
+  if(queueBadge){
+    if(qAvail>0){queueBadge.textContent=qAvail;queueBadge.style.display='inline-flex';}
+    else queueBadge.style.display='none';
+  }
+  if(courtsBadge){
+    if(activeMatches>0){courtsBadge.textContent=activeMatches;courtsBadge.style.display='inline-flex';}
+    else courtsBadge.style.display='none';
+  }
 
   renderAllPlayers();
 
@@ -3495,6 +3868,7 @@ function showView(v){
     if(el.getAttribute('onclick')===`showView('${v}')`)el.classList.add('active');
   });
   if(v==='payment'){renderPayment();renderFinance();}else if(v==='tournament')renderTournamentView();else render();
+  updateStickyStartBar();
 }
 
 let toastTimer;
@@ -5525,6 +5899,124 @@ render();
 })(10); // 10 × 500ms = up to 5s
 
 if(_restored) toast('Session restored ✓ — welcome back!');
+
+/* ── Swipe gestures for queue cards (mobile) ── */
+function attachSwipeHandlers(){
+  const cards=document.querySelectorAll('.pl-item.swipeable');
+  const SWIPE_THRESHOLD=70; // px to trigger action
+  cards.forEach(card=>{
+    const content=card.querySelector('.swipe-content');
+    if(!content||content._swipeBound)return; // avoid double-binding
+    content._swipeBound=true;
+    let startX=0,startY=0,curX=0,dragging=false,isHorizontal=null;
+
+    content.addEventListener('touchstart',e=>{
+      if(e.touches.length!==1)return;
+      startX=e.touches[0].clientX;startY=e.touches[0].clientY;curX=0;dragging=true;isHorizontal=null;
+      card.classList.add('swiping');
+    },{passive:true});
+
+    content.addEventListener('touchmove',e=>{
+      if(!dragging)return;
+      const dx=e.touches[0].clientX-startX;
+      const dy=e.touches[0].clientY-startY;
+      if(isHorizontal===null)isHorizontal=Math.abs(dx)>Math.abs(dy);
+      if(!isHorizontal){dragging=false;card.classList.remove('swiping');content.style.transform='';return;}
+      curX=dx;
+      content.style.transform=`translateX(${dx}px)`;
+      e.preventDefault();
+    },{passive:false});
+
+    content.addEventListener('touchend',()=>{
+      if(!dragging)return;
+      dragging=false;
+      card.classList.remove('swiping');
+      const pid_=parseInt(card.dataset.pid);
+      if(curX<=-SWIPE_THRESHOLD){
+        // Swipe left → remove from queue
+        content.style.transform='translateX(-100%)';
+        setTimeout(()=>removeFromQueue(pid_),120);
+      } else if(curX>=SWIPE_THRESHOLD){
+        // Swipe right → quick-add to match builder
+        content.style.transform='';
+        addToBuilder(pid_);
+      } else {
+        content.style.transform='';
+      }
+      curX=0;
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS (desktop)
+   Ctrl/Cmd+K = open global search (players + tabs)
+   Space      = start best suggested match on first idle court
+   Esc        = close any open modal
+   /          = focus the relevant search box for the active tab
+   Enter      = (inside global search) select first result
+   ══════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e=>{
+  // Don't hijack keys while typing in an input/textarea/select
+  const tag=(e.target.tagName||'').toLowerCase();
+  const isTyping=tag==='input'||tag==='textarea'||tag==='select'||e.target.isContentEditable;
+
+  // Ctrl/Cmd+K opens global search — works even while typing elsewhere
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){
+    e.preventDefault();
+    openGlobalSearch();
+    return;
+  }
+
+  // Esc always works, even while typing (to blur/close)
+  if(e.key==='Escape'){
+    const openModal=document.querySelector('.backdrop.open, .modal.open');
+    if(openModal){
+      openModal.classList.remove('open');
+      e.preventDefault();
+      return;
+    }
+    if(isTyping){e.target.blur();}
+    return;
+  }
+
+  // Enter inside the global search box selects the first result
+  if(e.key==='Enter'&&e.target.id==='gsearch-input'){
+    e.preventDefault();
+    const firstRow=document.querySelector('#gsearch-results .gsearch-row');
+    if(firstRow)firstRow.click();
+    return;
+  }
+
+  if(isTyping)return; // let typing happen normally for all other keys
+
+  // '/' focuses the relevant search box for the current tab
+  if(e.key==='/'){
+    e.preventDefault();
+    const activeView=document.querySelector('.view.active');
+    const viewId=activeView?activeView.id:'';
+    let target=null;
+    if(viewId==='view-queue')target=document.getElementById('queue-search');
+    else if(viewId==='view-players')target=document.getElementById('player-list-search')||document.getElementById('pp-search');
+    else target=document.getElementById('pp-search')||document.getElementById('player-list-search')||document.getElementById('queue-search');
+    if(target){target.focus();target.select?.();}
+    return;
+  }
+
+  // Space starts the best available suggested match on the first idle court
+  if(e.code==='Space'){
+    e.preventDefault();
+    const idleCourtIdx=S.courts.findIndex(c=>c.status==='idle');
+    if(idleCourtIdx===-1){toast('No idle courts available');return;}
+    const before=S.courts[idleCourtIdx].status;
+    startMatch(idleCourtIdx); // startMatch auto-generates a suggestion if none passed
+    if(S.courts[idleCourtIdx].status!=='idle'&&before==='idle'){
+      toast('▶ Started best match on Court '+(idleCourtIdx+1)+' (Space)');
+    }
+  }
+});
+
+
 // Register PWA service worker
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
