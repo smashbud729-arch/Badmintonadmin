@@ -888,6 +888,37 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .pl-item.compact .btn-red{padding:2px 6px;font-size:9px}
 .pl-item.compact .q-pos{font-size:13px;width:16px}
 
+/* ── Finance: Session Cost Calculator ── */
+.fin-card{background:var(--b2);border:1.5px solid var(--gr2);border-radius:10px;padding:14px;margin-bottom:12px}
+.fin-card-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--pk);letter-spacing:0.06em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.fin-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.fin-row label{font-size:11px;color:var(--gr4);flex:1;min-width:90px}
+.fin-row input{flex:1;min-width:80px;background:var(--b3);border:1px solid var(--gr2);border-radius:6px;color:var(--w);padding:6px 10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.fin-row input:focus{border-color:var(--pkl)}
+.fin-total-box{background:linear-gradient(135deg,var(--pkg),transparent);border:1px solid var(--pkl);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.fin-total-label{font-size:11px;color:var(--gr4);text-transform:uppercase;letter-spacing:0.06em}
+.fin-total-val{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--pk)}
+.split-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.split-tab{padding:6px 12px;border-radius:6px;border:1px solid var(--gr2);background:var(--b3);color:var(--gr4);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s}
+.split-tab.active{background:var(--pk);border-color:var(--pk);color:#fff}
+.split-result-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--b3);border:1px solid var(--gr2);border-radius:7px;margin-bottom:5px}
+.split-result-row .sr-name{flex:1;font-size:12px;font-weight:600}
+.split-result-row .sr-games{font-size:10px;color:var(--gr4)}
+.split-result-row .sr-amt{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--pk)}
+.split-result-row.excluded{opacity:0.4}
+.exclude-btn{padding:2px 7px;border-radius:4px;border:1px solid var(--gr2);background:transparent;color:var(--gr4);font-size:9px;cursor:pointer;flex-shrink:0}
+.exclude-btn.active{background:#1A0A0A;border-color:#CC4444;color:#FF8888}
+/* Quick calculator */
+.qcalc-display{background:var(--b3);border:1px solid var(--gr2);border-radius:8px;padding:14px;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--w);margin-bottom:10px;min-height:42px;overflow-x:auto;white-space:nowrap}
+.qcalc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qcalc-btn{padding:14px 0;border-radius:8px;border:1px solid var(--gr2);background:var(--b3);color:var(--w);font-size:16px;font-weight:700;cursor:pointer;transition:all 0.1s}
+.qcalc-btn:active{transform:scale(0.95);background:var(--b4)}
+.qcalc-btn.op{background:var(--pkg);color:var(--pk);border-color:var(--pkl)}
+.qcalc-btn.eq{background:var(--pk);color:#fff;border-color:var(--pk)}
+.qcalc-btn.clear{background:#1A0A0A;color:#FF8888;border-color:#CC4444}
+.fin-collapse-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.fin-collapse-icon{font-size:11px;color:var(--gr4);transition:transform 0.2s}
+
 /* ── Tournament Bracket ── */
 .bracket-rounds{display:flex;gap:28px;min-width:max-content;padding:10px 4px}
 .bracket-round{display:flex;flex-direction:column;justify-content:space-around;min-width:180px;gap:16px}
@@ -1349,19 +1380,101 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 
 <!-- ══ PAYMENT ══ -->
 <div class="view" id="view-payment">
-  <div style="background:var(--b2);border:1.5px solid var(--pkl);border-radius:10px;padding:14px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--pk);letter-spacing:0.08em">💰 Payment Tracker</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">
+
+  <!-- ═══ 1. SESSION COST CALCULATOR ═══ -->
+  <div class="fin-card">
+    <div class="fin-collapse-hdr" onclick="toggleFinSection('cost')">
+      <div class="fin-card-title">🏸 Session Cost Calculator</div>
+      <span class="fin-collapse-icon" id="fin-cost-icon">▼</span>
+    </div>
+    <div id="fin-cost-body">
+      <div style="font-size:10px;color:var(--gr4);margin-bottom:10px">Calculate the total cost of the session — court rental + shuttles. Feeds the Queue Fee Calculator below.</div>
+      <div class="fin-row"><label>Court rate (per hour)</label><input type="number" id="cost-court-rate" min="0" value="0" oninput="renderFinance()"/></div>
+      <div class="fin-row"><label>Hours played</label><input type="number" id="cost-hours" min="0" step="0.5" value="1" oninput="renderFinance()"/></div>
+      <div class="fin-row"><label>Number of courts</label><input type="number" id="cost-courts" min="1" value="1" oninput="renderFinance()"/></div>
+      <div class="fin-row"><label>Shuttle cost (per tube)</label><input type="number" id="cost-shuttle-rate" min="0" value="0" oninput="renderFinance()"/></div>
+      <div class="fin-row"><label>Tubes used</label><input type="number" id="cost-shuttle-count" min="0" value="0" oninput="renderFinance()"/></div>
+      <div class="fin-row"><label>Other costs</label><input type="number" id="cost-other" min="0" value="0" oninput="renderFinance()"/></div>
+      <div class="fin-total-box">
+        <span class="fin-total-label">Total Session Cost</span>
+        <span class="fin-total-val" id="cost-total">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 2. QUEUE FEE CALCULATOR (split modes) ═══ -->
+  <div class="fin-card">
+    <div class="fin-collapse-hdr" onclick="toggleFinSection('split')">
+      <div class="fin-card-title">🧮 Queue Fee Calculator</div>
+      <span class="fin-collapse-icon" id="fin-split-icon">▼</span>
+    </div>
+    <div id="fin-split-body">
+      <div style="font-size:10px;color:var(--gr4);margin-bottom:10px">Choose how to split the session cost among players in the queue.</div>
+      <div class="split-tabs">
+        <button class="split-tab active" id="split-equal" onclick="setSplitMode('equal')">Equal Split</button>
+        <button class="split-tab" id="split-standard" onclick="setSplitMode('standard')">Standard Fee</button>
+        <button class="split-tab" id="split-equity" onclick="setSplitMode('equity')">Equity Split</button>
+      </div>
+      <div id="split-mode-desc" style="font-size:10px;color:var(--gr4);margin-bottom:10px;font-style:italic"></div>
+      <div id="split-fee-row" style="display:none" class="fin-row"><label>Fee per game (PHP/AED)</label><input type="number" id="split-fixed-fee" min="0" value="10" oninput="renderFinance()"/></div>
+      <div id="split-results"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-xs btn-o" onclick="resetManualGameCounts()" title="Reset manual game count overrides">↺ Reset Game Counts</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. PAYMENT TRACKER ═══ -->
+  <div class="fin-card">
+    <div class="fin-collapse-hdr" onclick="toggleFinSection('tracker')">
+      <div class="fin-card-title">💰 Payment Tracker</div>
+      <span class="fin-collapse-icon" id="fin-tracker-icon">▼</span>
+    </div>
+    <div id="fin-tracker-body">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span style="font-size:10px;color:var(--gr4)">Fee per player:</span>
         <input class="pay-fee-inp" id="session-fee" type="number" value="50" min="0" oninput="renderPayment()"/>
         <span style="font-size:10px;color:var(--gr4)">Bank details:</span>
         <input class="fc" id="bank-acct" placeholder="Bank / Acct No." style="width:170px;padding:4px 8px;font-size:11px" oninput="renderPayment()"/>
+        <button class="btn btn-xs btn-o" style="margin-left:auto" onclick="useFeeFromSplit()" title="Pull amount from Queue Fee Calculator">↓ Use Split Amount</button>
+      </div>
+      <div class="pay-summ" id="pay-summ"></div>
+      <div id="payment-list" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. QUICK CALCULATOR ═══ -->
+  <div class="fin-card">
+    <div class="fin-collapse-hdr" onclick="toggleFinSection('qcalc')">
+      <div class="fin-card-title">🔢 Quick Calculator</div>
+      <span class="fin-collapse-icon" id="fin-qcalc-icon">▼</span>
+    </div>
+    <div id="fin-qcalc-body">
+      <div class="qcalc-display" id="qcalc-display">0</div>
+      <div class="qcalc-grid">
+        <button class="qcalc-btn clear" onclick="qcalcClear()">C</button>
+        <button class="qcalc-btn clear" onclick="qcalcBackspace()">⌫</button>
+        <button class="qcalc-btn op" onclick="qcalcInput('%')">%</button>
+        <button class="qcalc-btn op" onclick="qcalcInput('/')">÷</button>
+        <button class="qcalc-btn" onclick="qcalcInput('7')">7</button>
+        <button class="qcalc-btn" onclick="qcalcInput('8')">8</button>
+        <button class="qcalc-btn" onclick="qcalcInput('9')">9</button>
+        <button class="qcalc-btn op" onclick="qcalcInput('*')">×</button>
+        <button class="qcalc-btn" onclick="qcalcInput('4')">4</button>
+        <button class="qcalc-btn" onclick="qcalcInput('5')">5</button>
+        <button class="qcalc-btn" onclick="qcalcInput('6')">6</button>
+        <button class="qcalc-btn op" onclick="qcalcInput('-')">−</button>
+        <button class="qcalc-btn" onclick="qcalcInput('1')">1</button>
+        <button class="qcalc-btn" onclick="qcalcInput('2')">2</button>
+        <button class="qcalc-btn" onclick="qcalcInput('3')">3</button>
+        <button class="qcalc-btn op" onclick="qcalcInput('+')">+</button>
+        <button class="qcalc-btn" onclick="qcalcInput('0')" style="grid-column:span 2">0</button>
+        <button class="qcalc-btn" onclick="qcalcInput('.')">.</button>
+        <button class="qcalc-btn eq" onclick="qcalcEquals()">=</button>
       </div>
     </div>
-    <div class="pay-summ" id="pay-summ"></div>
   </div>
-  <div id="payment-list"></div>
+
 </div>
 
 </div>
@@ -1453,7 +1566,13 @@ let S={
   season:{id:null,champion:null},  // season tracking
   tournament:null,        // active tournament bracket
   tourneySelected:[],     // player ids selected for new bracket
-  sessionStartedAt:null   // timestamp for check-in arrival tracking
+  sessionStartedAt:null,  // timestamp for check-in arrival tracking
+  finance:{
+    splitMode:'equal',          // equal | standard | equity
+    excluded:[],                 // player ids excluded from cost split
+    manualGames:{},              // {playerId: manualGameCount} overrides
+    collapsed:{cost:false,split:false,tracker:false,qcalc:true} // section collapse state
+  }
 };
 const overtimeAlerted=new Set(); // courts already alerted for overtime this match
 
@@ -1487,6 +1606,7 @@ function saveSession(){
       season: S.season,
       sessionStartedAt: S.sessionStartedAt,
       tournament: S.tournament,
+      finance: S.finance,
       currentSessionId: currentSessionId,
       advStates: ADV_STATES.map(st=>({
         pool: st.pool,
@@ -1519,6 +1639,7 @@ function restoreSession(){
     if(snap.season)S.season=snap.season;
     if(snap.sessionStartedAt)S.sessionStartedAt=snap.sessionStartedAt;
     if(snap.tournament)S.tournament=snap.tournament;
+    if(snap.finance)S.finance=snap.finance;
     S.manager  = snap.manager  || {name:'',date:'',venue:''};
     S.queueSort= snap.queueSort|| 'fairness';
     S.pay      = snap.pay      || {};
@@ -2857,6 +2978,203 @@ function setPayNote(pid_,note){
   autoSave();
 }
 
+/* ══════════════════════════════════════════════════════
+   FINANCE: Session Cost Calculator + Queue Fee Splitter
+   ══════════════════════════════════════════════════════ */
+
+function toggleFinSection(key){
+  S.finance.collapsed[key]=!S.finance.collapsed[key];
+  const body=document.getElementById('fin-'+key+'-body');
+  const icon=document.getElementById('fin-'+key+'-icon');
+  if(body)body.style.display=S.finance.collapsed[key]?'none':'block';
+  if(icon)icon.style.transform=S.finance.collapsed[key]?'rotate(-90deg)':'rotate(0deg)';
+  autoSave();
+}
+
+function getSessionTotalCost(){
+  const courtRate=parseFloat(document.getElementById('cost-court-rate')?.value)||0;
+  const hours=parseFloat(document.getElementById('cost-hours')?.value)||0;
+  const courts=parseFloat(document.getElementById('cost-courts')?.value)||1;
+  const shuttleRate=parseFloat(document.getElementById('cost-shuttle-rate')?.value)||0;
+  const shuttleCount=parseFloat(document.getElementById('cost-shuttle-count')?.value)||0;
+  const other=parseFloat(document.getElementById('cost-other')?.value)||0;
+  return (courtRate*hours*courts)+(shuttleRate*shuttleCount)+other;
+}
+
+function setSplitMode(mode){
+  S.finance.splitMode=mode;
+  ['equal','standard','equity'].forEach(m=>document.getElementById('split-'+m)?.classList.toggle('active',m===mode));
+  autoSave();
+  renderFinance();
+}
+
+function toggleExcludePlayer(pid_){
+  const i=S.finance.excluded.indexOf(pid_);
+  if(i>=0)S.finance.excluded.splice(i,1);
+  else S.finance.excluded.push(pid_);
+  autoSave();
+  renderFinance();
+}
+
+function setManualGames(pid_,val){
+  const n=parseInt(val);
+  if(isNaN(n)||n<0)delete S.finance.manualGames[pid_];
+  else S.finance.manualGames[pid_]=n;
+  autoSave();
+  renderFinance();
+}
+
+function resetManualGameCounts(){
+  S.finance.manualGames={};
+  autoSave();
+  renderFinance();
+  toast('↺ Manual game counts reset to session stats');
+}
+
+// Get the relevant player pool: queue + on-court (same definition as Payment Tracker)
+function financePlayerPool(){
+  const queueSet=new Set(S.queue.map(id=>Number(id)));
+  return [...S.players].filter(p=>queueSet.has(Number(p.id))||p.onCourt).sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+// Session games played by a player (from S.log this session)
+function sessionGameCount(p){
+  let c=0;
+  S.log.forEach(e=>{
+    const ns=[...e.t1.split(' & '),...e.t2.split(' & ')];
+    if(ns.includes(p.name))c++;
+  });
+  return c;
+}
+
+function renderFinance(){
+  // Apply collapsed state to all 4 sections
+  ['cost','split','tracker','qcalc'].forEach(key=>{
+    const body=document.getElementById('fin-'+key+'-body');
+    const icon=document.getElementById('fin-'+key+'-icon');
+    const collapsed=S.finance.collapsed[key];
+    if(body)body.style.display=collapsed?'none':'block';
+    if(icon)icon.style.transform=collapsed?'rotate(-90deg)':'rotate(0deg)';
+  });
+  // ── Section 1: Cost total ──
+  const total=getSessionTotalCost();
+  const costTotalEl=document.getElementById('cost-total');
+  if(costTotalEl)costTotalEl.textContent=total.toFixed(0);
+
+  // ── Section 2: Split calculator ──
+  const pool=financePlayerPool();
+  const paying=pool.filter(p=>!S.finance.excluded.includes(p.id));
+  const mode=S.finance.splitMode;
+  const descEl=document.getElementById('split-mode-desc');
+  const feeRowEl=document.getElementById('split-fee-row');
+  const resultsEl=document.getElementById('split-results');
+  if(!resultsEl)return;
+
+  if(descEl){
+    descEl.textContent=
+      mode==='equal'?'Total session cost ÷ number of paying players. Everyone pays the same amount.':
+      mode==='standard'?'Fixed fee × games played per person. Players who played more, pay more.':
+      'Total cost ÷ total player-games across everyone, × your own games. Fairest for uneven game counts.';
+  }
+  if(feeRowEl)feeRowEl.style.display=mode==='standard'?'flex':'none';
+
+  if(!pool.length){
+    resultsEl.innerHTML='<div class="empty-state">No players in the queue yet.</div>';
+    return;
+  }
+
+  // Compute each player's games (manual override or session count)
+  const gamesFor=p=>S.finance.manualGames[p.id]!=null?S.finance.manualGames[p.id]:sessionGameCount(p);
+  const totalPlayerGames=paying.reduce((s,p)=>s+gamesFor(p),0);
+  const fixedFee=parseFloat(document.getElementById('split-fixed-fee')?.value)||0;
+
+  resultsEl.innerHTML=pool.map(p=>{
+    const excluded=S.finance.excluded.includes(p.id);
+    const games=gamesFor(p);
+    let amt=0;
+    if(!excluded){
+      if(mode==='equal') amt=paying.length?total/paying.length:0;
+      else if(mode==='standard') amt=fixedFee*games;
+      else if(mode==='equity') amt=totalPlayerGames>0?(total/totalPlayerGames)*games:0;
+    }
+    return `<div class="split-result-row ${excluded?'excluded':''}">
+      ${avHtml(p,24)}
+      <span class="sr-name">${p.name}</span>
+      <span class="sr-games">${games}g</span>
+      <input type="number" min="0" placeholder="games" value="${S.finance.manualGames[p.id]!=null?S.finance.manualGames[p.id]:''}"
+        oninput="setManualGames(${p.id},this.value)"
+        style="width:48px;background:var(--b4);border:1px solid var(--gr2);border-radius:4px;color:var(--w);padding:2px 4px;font-size:10px;text-align:center"
+        title="Manual game count override"/>
+      <span class="sr-amt">${excluded?'—':amt.toFixed(0)}</span>
+      <button class="exclude-btn ${excluded?'active':''}" onclick="toggleExcludePlayer(${p.id})" title="Exclude from payment split">${excluded?'Excluded':'Exclude'}</button>
+    </div>`;
+  }).join('');
+}
+
+// Pull the per-player amount from the active split mode into the Payment Tracker's flat fee field
+function useFeeFromSplit(){
+  const pool=financePlayerPool();
+  const paying=pool.filter(p=>!S.finance.excluded.includes(p.id));
+  const total=getSessionTotalCost();
+  const mode=S.finance.splitMode;
+  let amt=0;
+  if(mode==='equal'){
+    amt=paying.length?total/paying.length:0;
+  } else if(mode==='standard'){
+    amt=parseFloat(document.getElementById('split-fixed-fee')?.value)||0;
+  } else {
+    // equity — use average per-player amount as a reasonable flat fee suggestion
+    const gamesFor=p=>S.finance.manualGames[p.id]!=null?S.finance.manualGames[p.id]:sessionGameCount(p);
+    const totalGames=paying.reduce((s,p)=>s+gamesFor(p),0);
+    amt=totalGames>0?total/totalGames:0; // per-game rate
+  }
+  const feeInp=document.getElementById('session-fee');
+  if(feeInp){feeInp.value=Math.round(amt);renderPayment();}
+  toast('↓ Pulled '+Math.round(amt)+' from '+mode+' split');
+}
+
+/* ── Quick Calculator ── */
+let qcalcExpr='';
+function qcalcInput(val){
+  const display=document.getElementById('qcalc-display');if(!display)return;
+  // Prevent two operators in a row
+  const lastChar=qcalcExpr.slice(-1);
+  if(['+','-','*','/','%'].includes(val)&&['+','-','*','/','%'].includes(lastChar)){
+    qcalcExpr=qcalcExpr.slice(0,-1)+val;
+  } else {
+    qcalcExpr+=val;
+  }
+  display.textContent=qcalcExpr.replace(/\*/g,'×').replace(/\//g,'÷')||'0';
+}
+function qcalcClear(){
+  qcalcExpr='';
+  const display=document.getElementById('qcalc-display');
+  if(display)display.textContent='0';
+}
+function qcalcBackspace(){
+  qcalcExpr=qcalcExpr.slice(0,-1);
+  const display=document.getElementById('qcalc-display');
+  if(display)display.textContent=qcalcExpr.replace(/\*/g,'×').replace(/\//g,'÷')||'0';
+}
+function qcalcEquals(){
+  const display=document.getElementById('qcalc-display');if(!display)return;
+  if(!qcalcExpr){return;}
+  try{
+    // Safe eval: only allow digits, operators, dot, percent, parens
+    if(!/^[0-9+\-*/.% ]+$/.test(qcalcExpr))throw new Error('invalid');
+    // Convert % to /100 for simple percentage calculations
+    const safeExpr=qcalcExpr.replace(/(\d+(\.\d+)?)%/g,'($1/100)');
+    const result=Function('"use strict";return ('+safeExpr+')')();
+    if(!isFinite(result))throw new Error('infinite');
+    const rounded=Math.round(result*100)/100;
+    display.textContent=String(rounded);
+    qcalcExpr=String(rounded);
+  }catch(e){
+    display.textContent='Error';
+    qcalcExpr='';
+  }
+}
+
 /* ── Renders ── */
 function renderCourts(){
   const el=document.getElementById('courts-wrap');if(!el)return;
@@ -3246,7 +3564,7 @@ function showView(v){
   document.querySelectorAll('.nt').forEach(el=>{
     if(el.getAttribute('onclick')===`showView('${v}')`)el.classList.add('active');
   });
-  if(v==='payment')renderPayment();else if(v==='tournament')renderTournamentView();else render();
+  if(v==='payment'){renderPayment();renderFinance();}else if(v==='tournament')renderTournamentView();else render();
 }
 
 let toastTimer;
