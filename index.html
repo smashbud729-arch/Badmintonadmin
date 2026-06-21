@@ -901,11 +901,6 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
 .split-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .split-tab{padding:6px 12px;border-radius:6px;border:1px solid var(--gr2);background:var(--b3);color:var(--gr4);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s}
 .split-tab.active{background:var(--pk);border-color:var(--pk);color:#fff}
-.split-result-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--b3);border:1px solid var(--gr2);border-radius:7px;margin-bottom:5px}
-.split-result-row .sr-name{flex:1;font-size:12px;font-weight:600}
-.split-result-row .sr-games{font-size:10px;color:var(--gr4)}
-.split-result-row .sr-amt{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--pk)}
-.split-result-row.excluded{opacity:0.4}
 .exclude-btn{padding:2px 7px;border-radius:4px;border:1px solid var(--gr2);background:transparent;color:var(--gr4);font-size:9px;cursor:pointer;flex-shrink:0}
 .exclude-btn.active{background:#1A0A0A;border-color:#CC4444;color:#FF8888}
 /* Quick calculator */
@@ -1402,41 +1397,23 @@ html,body{height:100%;background:var(--b);color:var(--w);font-family:'DM Sans',s
     </div>
   </div>
 
-  <!-- ═══ 2. QUEUE FEE CALCULATOR (split modes) ═══ -->
-  <div class="fin-card">
-    <div class="fin-collapse-hdr" onclick="toggleFinSection('split')">
-      <div class="fin-card-title">🧮 Queue Fee Calculator</div>
-      <span class="fin-collapse-icon" id="fin-split-icon">▼</span>
-    </div>
-    <div id="fin-split-body">
-      <div style="font-size:10px;color:var(--gr4);margin-bottom:10px">Choose how to split the session cost among players in the queue.</div>
-      <div class="split-tabs">
-        <button class="split-tab active" id="split-equal" onclick="setSplitMode('equal')">Equal Split</button>
-        <button class="split-tab" id="split-standard" onclick="setSplitMode('standard')">Standard Fee</button>
-        <button class="split-tab" id="split-equity" onclick="setSplitMode('equity')">Equity Split</button>
-      </div>
-      <div id="split-mode-desc" style="font-size:10px;color:var(--gr4);margin-bottom:10px;font-style:italic"></div>
-      <div id="split-fee-row" style="display:none" class="fin-row"><label>Fee per game (PHP/AED)</label><input type="number" id="split-fixed-fee" min="0" value="10" oninput="renderFinance()"/></div>
-      <div id="split-results"></div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn btn-xs btn-o" onclick="resetManualGameCounts()" title="Reset manual game count overrides">↺ Reset Game Counts</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ 3. PAYMENT TRACKER ═══ -->
+  <!-- ═══ 2. PAYMENT TRACKER ═══ -->
   <div class="fin-card">
     <div class="fin-collapse-hdr" onclick="toggleFinSection('tracker')">
       <div class="fin-card-title">💰 Payment Tracker</div>
       <span class="fin-collapse-icon" id="fin-tracker-icon">▼</span>
     </div>
     <div id="fin-tracker-body">
+      <div class="split-tabs">
+        <button class="split-tab active" id="split-equal" onclick="setSplitMode('equal')">⚖ Equal Split</button>
+        <button class="split-tab" id="split-standard" onclick="setSplitMode('standard')">💵 Standard Fee</button>
+      </div>
+      <div id="split-mode-desc" style="font-size:10px;color:var(--gr4);margin-bottom:10px;font-style:italic"></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <span style="font-size:10px;color:var(--gr4)">Fee per player:</span>
-        <input class="pay-fee-inp" id="session-fee" type="number" value="50" min="0" oninput="renderPayment()"/>
+        <span style="font-size:10px;color:var(--gr4)" id="fee-label">Fee per player:</span>
+        <input class="pay-fee-inp" id="session-fee" type="number" value="50" min="0" oninput="onSessionFeeInput()"/>
         <span style="font-size:10px;color:var(--gr4)">Bank details:</span>
         <input class="fc" id="bank-acct" placeholder="Bank / Acct No." style="width:170px;padding:4px 8px;font-size:11px" oninput="renderPayment()"/>
-        <button class="btn btn-xs btn-o" style="margin-left:auto" onclick="useFeeFromSplit()" title="Pull amount from Queue Fee Calculator">↓ Use Split Amount</button>
       </div>
       <div class="pay-summ" id="pay-summ"></div>
       <div id="payment-list" style="margin-top:10px"></div>
@@ -1570,8 +1547,7 @@ let S={
   finance:{
     splitMode:'equal',          // equal | standard | equity
     excluded:[],                 // player ids excluded from cost split
-    manualGames:{},              // {playerId: manualGameCount} overrides
-    collapsed:{cost:false,split:false,tracker:false,qcalc:true} // section collapse state
+    collapsed:{cost:false,tracker:false,qcalc:true} // section collapse state
   }
 };
 const overtimeAlerted=new Set(); // courts already alerted for overtime this match
@@ -2915,16 +2891,45 @@ function removePlayer(pid_){
 }
 
 /* ── Payment ── */
+function onSessionFeeInput(){
+  // If user manually edits the fee while in Standard mode, just re-render.
+  // In Equal mode, the fee field is computed automatically so manual edits are overwritten on next render.
+  renderPayment();
+}
+
 function renderPayment(){
-  const fee=parseFloat(document.getElementById('session-fee')?.value)||0;
   const bank=document.getElementById('bank-acct')?.value||'';
   const pl=document.getElementById('payment-list'),ps=document.getElementById('pay-summ');
   if(!pl)return;
   // ONLY players whose ID is in S.queue — the definitive source of truth
   const queueSet=new Set(S.queue.map(id=>Number(id)));
-  const activePlayers=[...S.players]
+  const excludedSet=new Set(S.finance.excluded||[]);
+  const allActive=[...S.players]
     .filter(p=>queueSet.has(Number(p.id))||p.onCourt)
     .sort((a,b)=>a.name.localeCompare(b.name));
+  const activePlayers=allActive.filter(p=>!excludedSet.has(p.id));
+  const excludedPlayers=allActive.filter(p=>excludedSet.has(p.id));
+
+  // ── Split mode: Equal Split or Standard Fee ──
+  const mode=S.finance.splitMode==='standard'?'standard':'equal';
+  const descEl=document.getElementById('split-mode-desc');
+  const feeLabelEl=document.getElementById('fee-label');
+  const feeInp=document.getElementById('session-fee');
+  let fee=parseFloat(feeInp?.value)||0;
+
+  if(mode==='equal'){
+    const total=getSessionTotalCost();
+    fee=activePlayers.length?Math.round((total/activePlayers.length)*100)/100:0;
+    if(feeInp)feeInp.value=fee;
+    if(feeInp)feeInp.readOnly=true;
+    if(feeLabelEl)feeLabelEl.textContent='Fee per player (auto from Session Cost):';
+    if(descEl)descEl.textContent='Total Session Cost ÷ paying players. Set costs in the Session Cost Calculator above.';
+  } else {
+    if(feeInp)feeInp.readOnly=false;
+    if(feeLabelEl)feeLabelEl.textContent='Fee per player:';
+    if(descEl)descEl.textContent='Fixed fee per player — enter the amount manually.';
+  }
+
   let cash=0,bk=0,unp=0;
   activePlayers.forEach(p=>{
     const st=(S.pay[String(p.id)]||{}).status;
@@ -2935,18 +2940,38 @@ function renderPayment(){
     <div><div class="psv" style="color:#FF8888">${unp}</div><div class="psl">Pending</div></div>
     <div><div class="psv">${cash+bk+unp}</div><div class="psl">Total</div></div>
     <div><div class="psv">${activePlayers.length}</div><div class="psl">In Queue</div></div>`;
-  if(!activePlayers.length){
+
+  const excludedHtml=excludedPlayers.length?`<div class="info-note" style="margin-bottom:10px">🚫 ${excludedPlayers.length} player${excludedPlayers.length>1?'s':''} excluded from payment: <b>${excludedPlayers.map(p=>p.name).join(', ')}</b></div>`:'';
+
+  if(!allActive.length){
     pl.innerHTML='<div class="empty-state">No players in the queue yet.<br>Toggle players to queue in the Players tab.</div>';
     return;
   }
+  if(!activePlayers.length){
+    pl.innerHTML=excludedHtml+'<div class="empty-state">All players in queue are excluded from payment.</div>';
+    return;
+  }
+
   pl.innerHTML=(bank?`<div class="info-note" style="margin-bottom:10px">Bank transfer to: <b>${bank}</b></div>`:'')+
-    activePlayers.map(p=>{
+    excludedHtml+
+    allActive.map(p=>{
       const key=String(p.id);
       if(!S.pay[key])S.pay[key]={status:'unpaid',note:''};
       const pay=S.pay[key];
+      const excluded=excludedSet.has(p.id);
       const tag=p.onCourt
         ?`<span style="font-size:9px;font-weight:700;color:#3DA06A;border:1px solid #3DA06A;border-radius:2px;padding:1px 5px">ON COURT</span>`
         :`<span style="font-size:9px;font-weight:700;color:var(--pk);border:1px solid var(--pkl);border-radius:2px;padding:1px 5px">IN QUEUE</span>`;
+      if(excluded){
+        return `<div class="pay-row" style="opacity:0.45">
+          ${avHtml(p,28)}
+          <div class="pay-info">
+            <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:5px">${p.name}${tag}<span style="font-size:9px;color:#FF8888;border:1px solid #CC4444;border-radius:2px;padding:1px 5px">EXCLUDED</span></div>
+            <div style="font-size:10px;color:var(--gr4)">${p.gender==='F'?'Female':'Male'} · ${SKILL_N[p.skill]}</div>
+          </div>
+          <button class="exclude-btn active" onclick="toggleExcludePlayer(${p.id})">↩ Include</button>
+        </div>`;
+      }
       return `<div class="pay-row">
         ${avHtml(p,28)}
         <div class="pay-info">
@@ -2960,6 +2985,7 @@ function renderPayment(){
           <button class="pay-btn ${pay.status==='unpaid'?'p-unpaid':''}" onclick="setPayStatus(${p.id},'unpaid')">✕ Unpaid</button>
         </div>
         <input class="pay-note" placeholder="Note..." value="${pay.note||''}" oninput="setPayNote(${p.id},this.value)"/>
+        <button class="exclude-btn" onclick="toggleExcludePlayer(${p.id})" title="Exclude from payment">Exclude</button>
       </div>`;
     }).join('');
 }
@@ -3002,10 +3028,11 @@ function getSessionTotalCost(){
 }
 
 function setSplitMode(mode){
-  S.finance.splitMode=mode;
-  ['equal','standard','equity'].forEach(m=>document.getElementById('split-'+m)?.classList.toggle('active',m===mode));
+  S.finance.splitMode=mode==='standard'?'standard':'equal';
+  document.getElementById('split-equal')?.classList.toggle('active',S.finance.splitMode==='equal');
+  document.getElementById('split-standard')?.classList.toggle('active',S.finance.splitMode==='standard');
   autoSave();
-  renderFinance();
+  renderPayment();
 }
 
 function toggleExcludePlayer(pid_){
@@ -3013,124 +3040,27 @@ function toggleExcludePlayer(pid_){
   if(i>=0)S.finance.excluded.splice(i,1);
   else S.finance.excluded.push(pid_);
   autoSave();
-  renderFinance();
-}
-
-function setManualGames(pid_,val){
-  const n=parseInt(val);
-  if(isNaN(n)||n<0)delete S.finance.manualGames[pid_];
-  else S.finance.manualGames[pid_]=n;
-  autoSave();
-  renderFinance();
-}
-
-function resetManualGameCounts(){
-  S.finance.manualGames={};
-  autoSave();
-  renderFinance();
-  toast('↺ Manual game counts reset to session stats');
-}
-
-// Get the relevant player pool: queue + on-court (same definition as Payment Tracker)
-function financePlayerPool(){
-  const queueSet=new Set(S.queue.map(id=>Number(id)));
-  return [...S.players].filter(p=>queueSet.has(Number(p.id))||p.onCourt).sort((a,b)=>a.name.localeCompare(b.name));
-}
-
-// Session games played by a player (from S.log this session)
-function sessionGameCount(p){
-  let c=0;
-  S.log.forEach(e=>{
-    const ns=[...e.t1.split(' & '),...e.t2.split(' & ')];
-    if(ns.includes(p.name))c++;
-  });
-  return c;
+  renderPayment();
 }
 
 function renderFinance(){
-  // Apply collapsed state to all 4 sections
-  ['cost','split','tracker','qcalc'].forEach(key=>{
+  // Apply collapsed state to remaining sections
+  ['cost','tracker','qcalc'].forEach(key=>{
     const body=document.getElementById('fin-'+key+'-body');
     const icon=document.getElementById('fin-'+key+'-icon');
     const collapsed=S.finance.collapsed[key];
     if(body)body.style.display=collapsed?'none':'block';
     if(icon)icon.style.transform=collapsed?'rotate(-90deg)':'rotate(0deg)';
   });
-  // ── Section 1: Cost total ──
+  // Cost total
   const total=getSessionTotalCost();
   const costTotalEl=document.getElementById('cost-total');
   if(costTotalEl)costTotalEl.textContent=total.toFixed(0);
-
-  // ── Section 2: Split calculator ──
-  const pool=financePlayerPool();
-  const paying=pool.filter(p=>!S.finance.excluded.includes(p.id));
-  const mode=S.finance.splitMode;
-  const descEl=document.getElementById('split-mode-desc');
-  const feeRowEl=document.getElementById('split-fee-row');
-  const resultsEl=document.getElementById('split-results');
-  if(!resultsEl)return;
-
-  if(descEl){
-    descEl.textContent=
-      mode==='equal'?'Total session cost ÷ number of paying players. Everyone pays the same amount.':
-      mode==='standard'?'Fixed fee × games played per person. Players who played more, pay more.':
-      'Total cost ÷ total player-games across everyone, × your own games. Fairest for uneven game counts.';
-  }
-  if(feeRowEl)feeRowEl.style.display=mode==='standard'?'flex':'none';
-
-  if(!pool.length){
-    resultsEl.innerHTML='<div class="empty-state">No players in the queue yet.</div>';
-    return;
-  }
-
-  // Compute each player's games (manual override or session count)
-  const gamesFor=p=>S.finance.manualGames[p.id]!=null?S.finance.manualGames[p.id]:sessionGameCount(p);
-  const totalPlayerGames=paying.reduce((s,p)=>s+gamesFor(p),0);
-  const fixedFee=parseFloat(document.getElementById('split-fixed-fee')?.value)||0;
-
-  resultsEl.innerHTML=pool.map(p=>{
-    const excluded=S.finance.excluded.includes(p.id);
-    const games=gamesFor(p);
-    let amt=0;
-    if(!excluded){
-      if(mode==='equal') amt=paying.length?total/paying.length:0;
-      else if(mode==='standard') amt=fixedFee*games;
-      else if(mode==='equity') amt=totalPlayerGames>0?(total/totalPlayerGames)*games:0;
-    }
-    return `<div class="split-result-row ${excluded?'excluded':''}">
-      ${avHtml(p,24)}
-      <span class="sr-name">${p.name}</span>
-      <span class="sr-games">${games}g</span>
-      <input type="number" min="0" placeholder="games" value="${S.finance.manualGames[p.id]!=null?S.finance.manualGames[p.id]:''}"
-        oninput="setManualGames(${p.id},this.value)"
-        style="width:48px;background:var(--b4);border:1px solid var(--gr2);border-radius:4px;color:var(--w);padding:2px 4px;font-size:10px;text-align:center"
-        title="Manual game count override"/>
-      <span class="sr-amt">${excluded?'—':amt.toFixed(0)}</span>
-      <button class="exclude-btn ${excluded?'active':''}" onclick="toggleExcludePlayer(${p.id})" title="Exclude from payment split">${excluded?'Excluded':'Exclude'}</button>
-    </div>`;
-  }).join('');
-}
-
-// Pull the per-player amount from the active split mode into the Payment Tracker's flat fee field
-function useFeeFromSplit(){
-  const pool=financePlayerPool();
-  const paying=pool.filter(p=>!S.finance.excluded.includes(p.id));
-  const total=getSessionTotalCost();
-  const mode=S.finance.splitMode;
-  let amt=0;
-  if(mode==='equal'){
-    amt=paying.length?total/paying.length:0;
-  } else if(mode==='standard'){
-    amt=parseFloat(document.getElementById('split-fixed-fee')?.value)||0;
-  } else {
-    // equity — use average per-player amount as a reasonable flat fee suggestion
-    const gamesFor=p=>S.finance.manualGames[p.id]!=null?S.finance.manualGames[p.id]:sessionGameCount(p);
-    const totalGames=paying.reduce((s,p)=>s+gamesFor(p),0);
-    amt=totalGames>0?total/totalGames:0; // per-game rate
-  }
-  const feeInp=document.getElementById('session-fee');
-  if(feeInp){feeInp.value=Math.round(amt);renderPayment();}
-  toast('↓ Pulled '+Math.round(amt)+' from '+mode+' split');
+  // Sync split tab active state
+  document.getElementById('split-equal')?.classList.toggle('active',S.finance.splitMode!=='standard');
+  document.getElementById('split-standard')?.classList.toggle('active',S.finance.splitMode==='standard');
+  // Refresh payment tracker (it reads cost + split mode)
+  renderPayment();
 }
 
 /* ── Quick Calculator ── */
